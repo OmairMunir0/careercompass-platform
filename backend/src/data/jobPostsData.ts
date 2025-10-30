@@ -1,0 +1,28 @@
+export const jobPostsData = [
+  {
+    recruiterEmail: "recruiter@example.com",
+    title: "Frontend Developer",
+    description: "We are looking for a skilled Frontend Developer to join our team.",
+    location: "San Francisco, CA",
+    jobTypeName: "Full-Time",
+    workModeName: "Hybrid",
+    experienceLevelName: "Mid Level",
+    salaryMin: 90000,
+    salaryMax: 120000,
+    isActive: true,
+    requiredSkills: ["React", "TypeScript", "Tailwind CSS"],
+  },
+  {
+    recruiterEmail: "recruiter@example.com",
+    title: "Backend Developer",
+    description: "Seeking a backend engineer experienced in Node.js and MongoDB.",
+    location: "New York, NY",
+    jobTypeName: "Full-Time",
+    workModeName: "On-site",
+    experienceLevelName: "Mid Level",
+    salaryMin: 95000,
+    salaryMax: 130000,
+    isActive: true,
+    requiredSkills: ["Node.js", "Express.js", "MongoDB"],
+  },
+];

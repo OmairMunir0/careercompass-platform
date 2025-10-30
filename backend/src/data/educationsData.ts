@@ -1,0 +1,38 @@
+export const educationsData = [
+  {
+    userEmail: "candidate@example.com",
+    degree: "Bachelor of Science",
+    institution: "University of California, Berkeley",
+    fieldOfStudy: "Computer Science",
+    startDate: new Date("2015-09-01"),
+    endDate: new Date("2019-06-01"),
+    description: "Focused on full-stack web development and software design.",
+  },
+  {
+    userEmail: "candidate@example.com",
+    degree: "Master of Science",
+    institution: "Stanford University",
+    fieldOfStudy: "Software Engineering",
+    startDate: new Date("2019-09-01"),
+    endDate: new Date("2021-06-01"),
+    description: "Specialized in scalable web architectures and cloud systems.",
+  },
+  {
+    userEmail: "recruiter@example.com",
+    degree: "Bachelor of Business Administration",
+    institution: "New York University",
+    fieldOfStudy: "Human Resources Management",
+    startDate: new Date("2012-09-01"),
+    endDate: new Date("2016-06-01"),
+    description: "Studied organizational behavior and recruitment strategy.",
+  },
+  {
+    userEmail: "recruiter@example.com",
+    degree: "Master of Business Administration",
+    institution: "Harvard Business School",
+    fieldOfStudy: "Management",
+    startDate: new Date("2017-09-01"),
+    endDate: new Date("2019-06-01"),
+    description: "Focused on leadership and talent acquisition.",
+  },
+];

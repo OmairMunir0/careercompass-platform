@@ -1,0 +1,38 @@
+export const usersData = [
+  {
+    firstName: "Admin",
+    lastName: "User",
+    username: "admin",
+    email: "admin@example.com",
+    role: "admin",
+    bio: "System administrator account",
+    position: "Administrator",
+  },
+  {
+    firstName: "Candidate",
+    lastName: "User",
+    username: "candidate",
+    email: "candidate@example.com",
+    role: "candidate",
+    bio: "Candidate account for testing.",
+    position: "Frontend Developer",
+  },
+  {
+    firstName: "Recruiter",
+    lastName: "User",
+    username: "recruiter",
+    email: "recruiter@example.com",
+    role: "recruiter",
+    bio: "Recruiter account for testing.",
+    position: "HR Manager",
+  },
+  {
+    firstName: "Dev",
+    lastName: "User",
+    username: "dev",
+    email: "dev@example.com",
+    role: "dev",
+    bio: "Developer account for internal use.",
+    position: "Software Engineer",
+  },
+];

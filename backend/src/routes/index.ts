@@ -1,0 +1,49 @@
+import { Router } from "express";
+
+import authRoutes from "./authRoutes";
+import chatRoutes from "./chatRoutes";
+import experienceLevelRoutes from "./experienceLevelRoutes";
+import jobApplicationRoutes from "./jobApplicationRoutes";
+import jobApplicationStatusRoutes from "./jobApplicationStatusRoutes";
+import jobPostRoutes from "./jobPostRoutes";
+import jobTypeRoutes from "./jobTypeRoutes";
+import postRoutes from "./postRoutes";
+import proficiencyLevelRoutes from "./proficiencyLevelRoutes";
+import roleRoutes from "./roleRoutes";
+import savedJobRoutes from "./savedJobRoutes";
+import shortlistRoutes from "./shortlistRoutes";
+import shortlistStatusRoutes from "./shortlistStatusRoutes";
+import skillCategoryRoutes from "./skillCategoryRoutes";
+import skillRoutes from "./skillRoutes";
+import userCertificationRoutes from "./userCertificationRoutes";
+import userEducationRoutes from "./userEducationRoutes";
+import userExperienceRoutes from "./userExperienceRoutes";
+import userRoutes from "./userRoutes";
+import userSkillRoutes from "./userSkillRoutes";
+import workModeRoutes from "./workModeRoutes";
+
+const router = Router();
+
+router.use("/auth", authRoutes);
+router.use("/chats", chatRoutes);
+router.use("/experience-levels", experienceLevelRoutes);
+router.use("/job-applications", jobApplicationRoutes);
+router.use("/job-application-statuses", jobApplicationStatusRoutes);
+router.use("/job-posts", jobPostRoutes);
+router.use("/job-types", jobTypeRoutes);
+router.use("/posts", postRoutes);
+router.use("/proficiency-levels", proficiencyLevelRoutes);
+router.use("/roles", roleRoutes);
+router.use("/saved-jobs", savedJobRoutes);
+router.use("/shortlists", shortlistRoutes);
+router.use("/shortlist-statuses", shortlistStatusRoutes);
+router.use("/skill-categories", skillCategoryRoutes);
+router.use("/skills", skillRoutes);
+router.use("/user-certifications", userCertificationRoutes);
+router.use("/user-educations", userEducationRoutes);
+router.use("/user-experiences", userExperienceRoutes);
+router.use("/users", userRoutes);
+router.use("/user-skills", userSkillRoutes);
+router.use("/work-modes", workModeRoutes);
+
+export default router;
