@@ -8,6 +8,8 @@ import { useAuthStore } from "@/store/authStore";
 import { TextInput, PasswordInput } from "@/components/ui";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import { toast } from "react-hot-toast";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider, githubProvider } from "@/lib/firebase";
 
 const Login: React.FC = () => {
   const router = useRouter();

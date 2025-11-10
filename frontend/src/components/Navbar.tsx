@@ -36,7 +36,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter"): NavItem[] => {
 
   if (role === "candidate") {
     return [
-      { href: "/home", label: "Home", icon: LucideHome },
+      { href: "/timeline", label: "Home", icon: LucideHome },
       { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
       { href: "/chats", label: "Chats", icon: MessageSquare },
       { href: "/find-jobs", label: "Find Jobs", icon: Search },
@@ -45,7 +45,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter"): NavItem[] => {
     ];
   }
   return [
-    { href: "/home", label: "Home", icon: LucideHome },
+    { href: "/timeline", label: "Home", icon: LucideHome },
     { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
     { href: "/chats", label: "Chats", icon: MessageSquare },
     { href: "/job-posts", label: "Job Posts", icon: Briefcase },
