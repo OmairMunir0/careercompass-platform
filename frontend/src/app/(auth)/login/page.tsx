@@ -47,7 +47,7 @@ const Login: React.FC = () => {
       router.push("/dashboard");
     } catch (error: any) {
       const errorMessage =
-        error?.response?.data?.error || error.message || "Login failed. Please try again.";
+        error.response?.data?.message || error.message || "Login failed. Please try again.";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

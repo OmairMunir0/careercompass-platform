@@ -20,6 +20,7 @@ import {
   skillsData,
   usersData,
   workModesData,
+  interviewQuestionsData,
 } from "../data";
 
 import {
@@ -41,6 +42,7 @@ import {
   UserEducation,
   UserExperience,
   WorkMode,
+  InterviewQuestion,
 } from "../models";
 
 export async function seedChats() {
@@ -475,6 +477,49 @@ export async function seedWorkModes() {
   console.log("Work modes seeding complete.");
 }
 
+
+export async function seedInterviewQuestions() {
+  // Map skill categories to their ObjectIds
+  const categories = await SkillCategory.find({});
+  const categoriesMap: Record<string, mongoose.Types.ObjectId> = {};
+  categories.forEach((c) => {
+    categoriesMap[c.name] = c._id || c.id;
+  });
+
+  // Loop through the interviewQuestionsData
+  for (const [categoryName, questions] of Object.entries(interviewQuestionsData)) {
+    const categoryId = categoriesMap[categoryName];
+    if (!categoryId) {
+      console.warn(`Category '${categoryName}' not found. Skipping questions.`);
+      continue;
+    }
+
+    for (const q of questions) {
+      const exists = await InterviewQuestion.findOne({
+        question: q.question,
+        categoryId: categoryId,
+      });
+
+      if (exists) {
+        console.log(`Question already exists in category '${categoryName}'. Skipping.`);
+        continue;
+      }
+
+      await InterviewQuestion.create({
+        question: q.question,
+        answer: q.answer,
+        categoryId: categoryId,
+      });
+
+      console.log(`Created question in category '${categoryName}': ${q.question}`);
+    }
+  }
+
+  console.log("Interview questions seeding complete.");
+}
+
+
+
 export async function runSeed() {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) throw new Error("Missing MONGODB_URI in environment.");
@@ -500,6 +545,9 @@ export async function runSeed() {
     await seedShortlistStatuses();
     await seedSkills(categoriesMap);
     await seedWorkModes();
+    await seedSavedJobs();
+    await seedUserCertifications();
+    await seedInterviewQuestions();
 
     console.log("Seeding complete.");
   } catch (err) {

@@ -15,5 +15,5 @@ export const skillsData = {
   Database: ["PostgreSQL", "MongoDB", "MySQL", "Redis", "SQLite"],
   Design: ["Figma", "Adobe XD", "UI/UX Design", "Wireframing"],
   Management: ["Agile", "Scrum", "Project Management", "Team Leadership"],
-  Testing: ["Jest", "Cypress", "Playwright", "Mocha", "Chai"],
+  Testing: ["Jest", "Mocha", "Cypress", "Selenium"],
 };

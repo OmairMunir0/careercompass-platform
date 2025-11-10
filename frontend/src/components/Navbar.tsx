@@ -30,28 +30,47 @@ const guestNavItems: NavItem[] = [
   { href: "/register", label: "Sign Up", primary: true },
 ];
 
-const getAuthNavItems = (role: "candidate" | "recruiter"): NavItem[] => {
+const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] => {
   const dashboardHref =
-    role === "candidate" ? "/dashboard?role=candidate" : "/dashboard?role=recruiter";
+    role === "candidate"
+      ? "/dashboard?role=candidate"
+      : role === "recruiter"
+        ? "/dashboard?role=recruiter"
+        : role === "admin"
+          ? "/dashboard?role=admin"
+          : "/dashboard";
 
   if (role === "candidate") {
     return [
       { href: "/timeline", label: "Home", icon: LucideHome },
       { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
+      { href: "/interviews", label: "Practice Interview", icon: Briefcase },
       { href: "/chats", label: "Chats", icon: MessageSquare },
       { href: "/find-jobs", label: "Find Jobs", icon: Search },
       { href: "/saved-jobs", label: "Saved Jobs", icon: Heart },
       { href: "/profile", label: "Profile", icon: User },
     ];
   }
-  return [
-    { href: "/timeline", label: "Home", icon: LucideHome },
-    { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
-    { href: "/chats", label: "Chats", icon: MessageSquare },
-    { href: "/job-posts", label: "Job Posts", icon: Briefcase },
-    { href: "/search-candidate", label: "Find Candidates", icon: Search },
-    { href: "/profile", label: "Profile", icon: User },
-  ];
+  else if (role === "admin") {
+    return [
+      { href: "/admin/dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
+      { href: "/admin/users", label: "Manage Users", icon: User },
+      { href: "/admin/job-posts", label: "Manage Job Posts", icon: Briefcase },
+      { href: "/admin/interviews", label: "Manage Interviews", icon: Briefcase },
+      { href: "/admin/skills", label: "Manage Skills", icon: MessageSquare },
+    ];
+  }
+  else {
+    return [
+      { href: "/timeline", label: "Home", icon: LucideHome },
+      { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
+      { href: "/interviews", label: "Practice Interview", icon: Briefcase },
+      { href: "/chats", label: "Chats", icon: MessageSquare },
+      { href: "/job-posts", label: "Job Posts", icon: Briefcase },
+      { href: "/search-candidate", label: "Find Candidates", icon: Search },
+      { href: "/profile", label: "Profile", icon: User },
+    ];
+  }
 };
 
 export default function Navbar() {
@@ -62,6 +81,7 @@ export default function Navbar() {
 
   useEffect(() => {
     if (token && !user) fetchCurrentUser();
+    console.log(role);
   }, [token, user, fetchCurrentUser]);
 
   const handleLogout = async () => {
@@ -70,7 +90,7 @@ export default function Navbar() {
   };
 
   const navItems =
-    isAuthenticated && role ? getAuthNavItems(role as "candidate" | "recruiter") : guestNavItems;
+    isAuthenticated && role ? getAuthNavItems(role as "candidate" | "recruiter" | "admin") : guestNavItems;
 
   return (
     <nav className="bg-white shadow-lg border-b border-purple-100">

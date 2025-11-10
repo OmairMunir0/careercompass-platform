@@ -16,3 +16,4 @@ export { skillCategoriesData } from "./skillCategoriesData";
 export { skillsData } from "./skillsData";
 export { usersData } from "./usersData";
 export { workModesData } from "./workModesData";
+export { interviewQuestionsData } from "./interviewQuestionsData";

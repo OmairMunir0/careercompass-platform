@@ -19,6 +19,8 @@ export { UserEducation } from "./UserEducation";
 export { UserExperience } from "./UserExperience";
 export { UserSkill } from "./UserSkill";
 export { WorkMode } from "./WorkMode";
+export { InterviewQuestion } from "./InterviewQuestion";
+
 
 export type { IChat } from "./Chat";
 export type { IExperienceLevel } from "./ExperienceLevel";
@@ -41,3 +43,5 @@ export type { IUserEducation } from "./UserEducation";
 export type { IUserExperience } from "./UserExperience";
 export type { IUserSkill } from "./UserSkill";
 export type { IWorkMode } from "./WorkMode";
+export type { IInterviewQuestion } from "./InterviewQuestion";
+

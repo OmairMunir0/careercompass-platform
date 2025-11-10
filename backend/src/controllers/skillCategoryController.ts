@@ -25,8 +25,14 @@ export const createSkillCategory = async (req: Request, res: Response) => {
  */
 export const getSkillCategories = async (_req: Request, res: Response) => {
   try {
-    const categories: ISkillCategory[] = await SkillCategory.find();
-    res.json(categories);
+    const categories: ISkillCategory[] = await SkillCategory.find({}, { _id: 1, name: 1 });
+
+    const formatted = categories.map(cat => ({
+      _id: cat._id?.toString(),
+      name: cat.name
+    }));
+    res.json(formatted);
+    console.log("Fetched skill categories:", formatted);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

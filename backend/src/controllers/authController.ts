@@ -62,7 +62,7 @@ export const registerUser = async (req: Request, res: Response) => {
       lastName,
       roleId: roleRecord._id,
       username: `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(
-        Math.random() * 1000
+        Math.random() * 10000
       )}`,
       publicEmail: normalizedEmail,
       companyName: companyName ?? null,

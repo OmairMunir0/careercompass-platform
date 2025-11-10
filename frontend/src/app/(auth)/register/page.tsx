@@ -74,7 +74,7 @@ const Register: React.FC = () => {
       router.push("/dashboard");
     } catch (error: any) {
       const errorMessage =
-        error?.response?.data?.error || error.message || "Registration failed. Please try again.";
+        error.response?.data?.message || "Registration failed. Please try again.";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
