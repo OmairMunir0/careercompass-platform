@@ -49,7 +49,13 @@ MONGO_URI=mongodb://localhost:27017/your-db-name
 JWT_SECRET=your_secret_key
 ```
 
-3. Run the API server
+3. Seed in default entries in DB (Optional)
+
+```
+npm run seed
+```
+
+4. Run the API server
 
 ```
 npm run dev
@@ -75,13 +81,7 @@ npm install
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
-3. Seed in default entries in DB (Optional)
-
-```
-npm run seed
-```
-
-4. Run the frontend
+3. Run the frontend
 
 ```
 npm run dev
