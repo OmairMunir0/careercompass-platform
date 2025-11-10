@@ -75,7 +75,13 @@ npm install
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
-3. Run the frontend
+3. Seed in default entries in DB (Optional)
+
+```
+npm run seed
+```
+
+4. Run the frontend
 
 ```
 npm run dev
