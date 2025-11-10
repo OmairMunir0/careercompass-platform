@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
