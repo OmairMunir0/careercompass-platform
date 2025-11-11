@@ -31,6 +31,7 @@ export const createInterviewQuestion = async (req: Request, res: Response) => {
 export const getInterviewQuestions = async (req: Request, res: Response) => {
   try {
     const { categoryId } = req.query;
+    console.log(categoryId);
 
     const filter = categoryId ? { categoryId } : {};
     const questions: IInterviewQuestion[] = await InterviewQuestion.find(filter, {
@@ -51,7 +52,6 @@ export const getInterviewQuestions = async (req: Request, res: Response) => {
     }));
 
     res.json(formatted);
-    console.log("Fetched interview questions:", formatted);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

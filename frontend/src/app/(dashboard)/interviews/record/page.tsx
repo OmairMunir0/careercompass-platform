@@ -27,10 +27,12 @@ const CategoryInterviewsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(true);
     const [interviewStarted, setInterviewStarted] = useState(false);
-    
+
     // Camera and recording states
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const recordedChunksRef = useRef<Blob[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
@@ -40,6 +42,34 @@ const CategoryInterviewsPage: React.FC = () => {
     useEffect(() => {
         if (token && categoryId && interviewStarted) fetchInterviews();
     }, [token, categoryId, interviewStarted]);
+
+
+    useEffect(() => {
+        if (isRecording) {
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => {
+                    if (prev >= 480) {
+                        stopRecording();
+                        return prev;
+                    }
+                    return prev + 1;
+                });
+            }, 1000);
+        } else {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [isRecording]);
+
 
     const fetchInterviews = async () => {
         setLoading(true);
@@ -68,65 +98,88 @@ const CategoryInterviewsPage: React.FC = () => {
     // Camera and recording functions
     const initializeCamera = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 1280, height: 720 }, 
-                audio: true 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 },
+                audio: true,
             });
+
             setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
+
+            // Wait for React to paint the <video> element
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current
+                        .play()
+                        .then(() => console.log("✅ Camera stream playing"))
+                        .catch((err) => {
+                            console.error("🚫 Error starting video playback:", err);
+                        });
+                }
+            }, 100);
+
             setIsCameraReady(true);
         } catch (error) {
-            console.error('Error accessing camera:', error);
-            alert('Unable to access camera. Please check permissions.');
+            console.error("Error accessing camera:", error);
+            alert("Unable to access camera. Please check permissions.");
         }
     };
+
 
     const startRecording = () => {
         if (!cameraStream) return;
-        
-        const mediaRecorder = new MediaRecorder(cameraStream, {
-            mimeType: 'video/webm;codecs=vp9,opus'
-        });
-        
+
+        // Choose a supported mimeType
+        let options: MediaRecorderOptions = { mimeType: '' };
+
+        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
+            options.mimeType = "video/webm;codecs=vp9,opus";
+        } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")) {
+            options.mimeType = "video/webm;codecs=vp8,opus";
+        } else if (MediaRecorder.isTypeSupported("video/webm")) {
+            options.mimeType = "video/webm";
+        } else if (MediaRecorder.isTypeSupported("video/mp4")) {
+            options.mimeType = "video/mp4";
+        } else {
+            alert("No supported video format found for this browser.");
+            return;
+        }
+
+        const mediaRecorder = new MediaRecorder(cameraStream, options);
+
         mediaRecorderRef.current = mediaRecorder;
+
+        recordedChunksRef.current = [];
         setRecordedChunks([]);
-        
+
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
-                setRecordedChunks(prev => [...prev, event.data]);
+                recordedChunksRef.current.push(event.data);
+                setRecordedChunks((prev) => [...prev, event.data]);
             }
         };
-        
+
         mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const blob = new Blob(recordedChunksRef.current, { type: options.mimeType });
             downloadVideo(blob);
         };
-        
+
         mediaRecorder.start();
         setIsRecording(true);
         setRecordingTime(0);
-        
-        // Start timer
-        const timer = setInterval(() => {
-            setRecordingTime(prev => {
-                if (prev >= 480) { // 8 minutes in seconds
-                    stopRecording();
-                    clearInterval(timer);
-                    return prev;
-                }
-                return prev + 1;
-            });
-        }, 1000);
     };
 
     const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
+        const recorder = mediaRecorderRef.current;
+        if (recorder && recorder.state !== "inactive") {
+            console.log("🟢 Stopping recording...");
+            recorder.stop();
             setIsRecording(false);
+        } else {
+            console.warn("⚠️ No active recording to stop.");
         }
     };
+
 
     const downloadVideo = (blob: Blob) => {
         const url = URL.createObjectURL(blob);
@@ -199,7 +252,7 @@ const CategoryInterviewsPage: React.FC = () => {
                     {/* Camera Interface */}
                     <div className="mb-8">
                         <h2 className="text-xl font-semibold mb-4">Camera Preview</h2>
-                        
+
                         {!isCameraReady ? (
                             <div className="bg-gray-100 rounded-lg p-8 text-center">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
@@ -214,7 +267,7 @@ const CategoryInterviewsPage: React.FC = () => {
                                     playsInline
                                     className="w-full h-96 object-cover"
                                 />
-                                
+
                                 {/* Recording overlay */}
                                 {isRecording && (
                                     <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full flex items-center space-x-2">
@@ -222,12 +275,12 @@ const CategoryInterviewsPage: React.FC = () => {
                                         <span className="text-sm font-medium">{formatTime(recordingTime)}</span>
                                     </div>
                                 )}
-                                
+
                                 {/* Progress bar for recording */}
                                 {isRecording && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2">
                                         <div className="w-full bg-gray-700 rounded-full h-2">
-                                            <div 
+                                            <div
                                                 className="bg-red-600 h-2 rounded-full transition-all duration-1000"
                                                 style={{ width: `${(recordingTime / 480) * 100}%` }}
                                             ></div>
@@ -239,7 +292,7 @@ const CategoryInterviewsPage: React.FC = () => {
                                 )}
                             </div>
                         )}
-                        
+
                         {/* Recording Controls */}
                         <div className="flex justify-center space-x-4 mt-6">
                             {!isRecording ? (
@@ -264,7 +317,7 @@ const CategoryInterviewsPage: React.FC = () => {
                                     <span>Stop Recording</span>
                                 </button>
                             )}
-                            
+
                             {/* Test button to end recording */}
                             <button
                                 onClick={stopRecording}

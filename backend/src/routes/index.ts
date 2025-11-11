@@ -21,6 +21,7 @@ import userExperienceRoutes from "./userExperienceRoutes";
 import userRoutes from "./userRoutes";
 import userSkillRoutes from "./userSkillRoutes";
 import workModeRoutes from "./workModeRoutes";
+import interviewQuestionRoutes from "./interviewQuestionsRoutes";
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use("/user-experiences", userExperienceRoutes);
 router.use("/users", userRoutes);
 router.use("/user-skills", userSkillRoutes);
 router.use("/work-modes", workModeRoutes);
+router.use("/interview-questions", interviewQuestionRoutes);
 
 export default router;

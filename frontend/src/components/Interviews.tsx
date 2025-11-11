@@ -38,7 +38,7 @@ const Interviews: React.FC = () => {
     };
 
     const handleCategorySelect = (category: SkillCategory) => {
-        router.push(`/interviews/${category._id}`);
+        router.push(`/interviews/record?categoryId=${category._id}&categoryName=${encodeURIComponent(category.name)}`);
     };
 
     return (

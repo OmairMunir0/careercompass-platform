@@ -32,7 +32,6 @@ export const getSkillCategories = async (_req: Request, res: Response) => {
       name: cat.name
     }));
     res.json(formatted);
-    console.log("Fetched skill categories:", formatted);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
