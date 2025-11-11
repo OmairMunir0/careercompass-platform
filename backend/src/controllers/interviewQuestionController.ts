@@ -30,7 +30,7 @@ export const createInterviewQuestion = async (req: Request, res: Response) => {
  */
 export const getInterviewQuestions = async (req: Request, res: Response) => {
   try {
-    const { categoryId } = req.query;
+    const { categoryId, categoryName } = req.query;
     console.log(categoryId);
 
     const filter = categoryId ? { categoryId } : {};

@@ -1,9 +1,9 @@
 'use client';
 
-import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import React, { useEffect, useState } from "react";
 import Interviews from "@/components/Interviews";
+import InterviewQuestions from "@/components/InterviewQuestions";
 
 interface User {
   _id: string;
@@ -16,18 +16,7 @@ interface User {
 
 const Interview: React.FC = () => {
   const { user } = useAuthStore();
-  const [loading, setLoading] = useState(false);
-
   const token = useAuthStore.getState().token;
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
-    setLoading(true);
-    
-  };
 
   if (!user) {
     return (
