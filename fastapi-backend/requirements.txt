@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+deepface
+opencv-python
+mediapipe
+torch
+transformers
+sentence-transformers
+whisper
+language-tool-python
+numpy
+pandas
+matplotlib
+tqdm

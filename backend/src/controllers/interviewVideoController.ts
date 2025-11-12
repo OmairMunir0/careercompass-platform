@@ -1,0 +1,43 @@
+// controllers/interviewVideoController.ts
+import { Response } from "express";
+import axios from "axios";
+import FormData from "form-data";
+import { Readable } from "stream";
+
+export const uploadInterviewVideo = async (req: any, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Create a readable stream from buffer
+    const fileStream = Readable.from(file.buffer);
+
+    const formData = new FormData();
+    formData.append("file", fileStream, {
+      filename: file.originalname,
+      contentType: file.mimetype,
+      knownLength: file.size,
+    });
+
+    const response = await axios.post("http://127.0.0.1:8000/api/interview_video/upload", formData, {
+      headers: {
+        ...formData.getHeaders(),
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    });
+
+    return res.json({
+      message: "Video successfully sent to FastAPI",
+      fastapi_response: response.data,
+    });
+  } catch (err: any) {
+    console.error("Upload error:", err.response?.data || err.message);
+    return res.status(500).json({
+      message: "Error sending video to FastAPI",
+      error: err.response?.data || err.message,
+    });
+  }
+};

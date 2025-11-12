@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
 
+// --- Types ---
 interface InterviewQuestion {
     _id: string;
     question: string;
@@ -20,8 +22,10 @@ interface InterviewQuestionsProps {
     reset?: boolean;
 }
 
-const DEFAULT_ANSWER_TIME = 10;
+// --- Constants ---
+const DEFAULT_ANSWER_TIME = 30;
 
+// --- InterviewQuestions Component ---
 const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
     speakQuestion,
     interviewStarted,
@@ -76,21 +80,28 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
     useEffect(() => {
         if (!interviewStarted || questions.length === 0) return;
 
+        const spokenRef = new Set<number>();
+
         const askQuestion = (index: number) => {
-            if (index >= questions.length || recordingStopped) return; // STOP if recording stopped
+            if (index >= questions.length || recordingStopped) return;
 
             setCurrentIndex(index);
 
+            // 🔒 Prevent re-speaking same question
+            if (spokenRef.has(index)) return;
+            spokenRef.add(index);
+
             const utterance = new SpeechSynthesisUtterance(`Question: ${questions[index].question}`);
             const voices = window.speechSynthesis.getVoices();
-            if (voices.length > 0) utterance.voice = voices.find(v => v.lang.startsWith("en")) || voices[0];
+            if (voices.length > 0)
+                utterance.voice = voices.find(v => v.lang.startsWith("en")) || voices[0];
             utterance.rate = 1;
             utterance.pitch = 1;
 
             utterance.onend = () => {
-                if (recordingStopped) return; // prevent next question
-                setTimer(DEFAULT_ANSWER_TIME);
+                if (recordingStopped) return;
 
+                setTimer(DEFAULT_ANSWER_TIME);
                 answerTimerRef.current = setInterval(() => {
                     setTimer(prev => {
                         if (prev <= 1) {
@@ -105,7 +116,7 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
                 }, 1000);
             };
 
-            // **Immediately cancel queued speeches if recording stopped**
+            window.speechSynthesis.cancel();
             if (!recordingStopped) {
                 window.speechSynthesis.speak(utterance);
             }
@@ -114,12 +125,11 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
         askQuestion(0);
 
         return () => {
-            window.speechSynthesis.cancel(); // stop all speech
+            window.speechSynthesis.cancel();
             if (answerTimerRef.current) clearInterval(answerTimerRef.current);
             if (nextQuestionTimerRef.current) clearTimeout(nextQuestionTimerRef.current);
         };
     }, [interviewStarted, questions, recordingStopped]);
-
 
 
     const handleSpeakButton = (text: string) => {
@@ -140,8 +150,7 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
                     {questions.map((q, idx) => (
                         <li
                             key={q._id}
-                            className={`p-4 bg-white shadow rounded flex justify-between items-center ${idx === currentIndex ? "border-2 border-purple-600" : ""
-                                }`}
+                            className={`p-4 bg-white shadow rounded flex justify-between items-center ${idx === currentIndex ? "border-2 border-purple-600" : ""}`}
                         >
                             <div>
                                 <p className="font-semibold">{q.question}</p>
@@ -170,5 +179,4 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
         </div>
     );
 };
-
 export default InterviewQuestions;

@@ -30,7 +30,33 @@ root/
 - MongoDB instance running via Atlas
 - Backend Setup (Express)
 
-### Backend Setup
+### Frontend Setup (Next.js)
+
+Path: frontend/
+
+1. Install dependencies
+
+```
+cd frontend
+npm install
+```
+
+2. Environment variables (.env.local)
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
+3. Run the frontend
+
+```
+npm run dev
+```
+
+Frontend should now be available at:
+**http://localhost:3000**
+
+### Backend Setup (MERN)
 
 Path: backend/
 
@@ -64,31 +90,54 @@ npm run dev
 Backend should now be available at:
 **http://localhost:3001**
 
-### Frontend Setup (Next.js)
+### FastAPI Setup (Python AI/Video Processing Backend)
 
-Path: frontend/
+Path: fastapi-backend/
 
-1. Install dependencies
-
-```
-cd frontend
-npm install
-```
-
-2. Environment variables (.env.local)
+1. Create and activate a virtual environment:
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+cd fastapi-backend
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 ```
 
-3. Run the frontend
+2. Install dependencies:
 
 ```
-npm run dev
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+Example requirement.txt
+```
+fastapi
+uvicorn[standard]
+deepface
+opencv-python
+mediapipe
+torch
+transformers
+sentence-transformers
+whisper
+language-tool-python
+numpy
+pandas
+matplotlib
+tqdm
 ```
 
-Frontend should now be available at:
-**http://localhost:3000**
+3. Run the FastAPI server:
+
+```
+uvicorn app.main:app --reload
+```
+
+FastAPI server should now be available at:
+**http://localhost:8000**
+
 
 ## Notes
 
@@ -96,3 +145,24 @@ Frontend should now be available at:
 - Use TypeScript in both layers.
 - MongoDB models live under backend/src/models.
 - Seed data is added for all the models and live under backend/src/data
+- Frontend → Express → FastAPI workflow:
+```
+    Frontend (React) 
+        │
+        │ Uploads video/audio
+        ▼
+    Express Backend
+        │
+        │ Forwards file path or video to FastAPI
+        ▼
+    FastAPI Backend
+        │
+        │ Processes video (emotion, pose, speech, grammar, similarity)
+        │ Returns JSON report
+        ▼
+    Express Backend
+        │
+        │ Sends processed report back to Frontend
+        ▼
+    Frontend Dashboard
+```
