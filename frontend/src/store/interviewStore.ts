@@ -26,6 +26,6 @@ export const useInterviewStore = create<InterviewStore>()(
     {
       name: "interview-storage", 
       getStorage: () => localStorage,
-    }
+    } as any
   )
 );
