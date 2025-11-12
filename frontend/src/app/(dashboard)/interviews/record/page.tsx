@@ -6,7 +6,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import InterviewQuestions from "@/components/InterviewQuestions";
-import { set } from "date-fns";
+import { useInterviewStore } from "@/store/interviewStore";
 
 // --- Types ---
 interface Interview {
@@ -26,6 +26,7 @@ interface MediaRecorder {
 
 const CategoryInterviewsPage: React.FC = () => {
     const { categoryId } = useParams();
+    const { addAnalysis } = useInterviewStore();
     const token = useAuthStore.getState().token;
     const router = useRouter();
 
@@ -167,15 +168,15 @@ const CategoryInterviewsPage: React.FC = () => {
             });
 
             console.log("Uploaded video URL:", response.data);
-            const { video_path } = response.data;
-
-            const end_path = video_path.split('/')[-1];
+            const { fastapi_response } = response.data;
+            const video_path = fastapi_response.video_path;
+            addAnalysis(fastapi_response);
 
             // Redirect to analysis page
-            router.push(`/interviews/analysis?video=${encodeURIComponent(end_path)}`);
+            router.push(`/interviews/analysis?video=${encodeURIComponent(video_path)}`);
             setTimeout(() => {
                 window.location.reload();
-            }, 100);
+            }, 1000);
         } catch (error) {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
