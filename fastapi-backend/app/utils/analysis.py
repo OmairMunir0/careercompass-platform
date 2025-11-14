@@ -1,6 +1,5 @@
 from __future__ import annotations
 from fastapi import UploadFile
-import speech_recognition as sr
 import os
 from dotenv import load_dotenv
 import openai
@@ -8,9 +7,7 @@ import tempfile
 from pathlib import Path
 import subprocess
 import math
-from openai import OpenAI
-from pathlib import Path
-from typing import List
+from typing import List, Tuple, Dict
 import uuid
 import whisper
 
@@ -20,6 +17,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 whisper_model = whisper.load_model("base")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads/videos")
 BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
+ANSWER_TIME = os.getenv("ANSWER_TIME", 40)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
@@ -64,67 +62,36 @@ def extract_audio_to_wav(video_path: str) -> str:
     return tmp_mp3_path
 
 
-# === MODULE 3: Transcribe audio in chunks ===
-def transcribe_audio_chunks(audio_path: str, chunk_duration: int = 25) -> str:
+# === MODULE 3: Transcribe with timestamps + split into 40-sec chunks ===
+def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -> Tuple[str, List[str]]:
     if not os.path.exists(audio_path):
-        raise FileNotFoundError(f"Audio file not found: {audio_path}")
+        raise FileNotFoundError(f"Audio not found: {audio_path}")
 
-    print(f"[Local Whisper] Loading audio: {audio_path}")
-    audio = whisper.load_audio(audio_path)
-    duration = len(audio) / whisper.audio.SAMPLE_RATE
+    print(f"[Whisper] Transcribing: {audio_path}")
+    result = whisper_model.transcribe(
+        audio_path,
+        word_timestamps=True,
+    )
 
-    chunks = math.ceil(duration / chunk_duration)
-    full_transcript = []
+    full_transcript = result["text"].strip()
+    segments = result["segments"]
 
-    for i in range(chunks):
-        start = i * chunk_duration
-        end = min((i + 1) * chunk_duration, duration)
-        print(f"  → Chunk {i+1}: {start:.1f}s → {end:.1f}s")
+    num_chunks = 10
+    chunks = [""] * num_chunks
 
-        chunk_audio = audio[int(start * whisper.audio.SAMPLE_RATE): int(end * whisper.audio.SAMPLE_RATE)]
-        result = whisper_model.transcribe(chunk_audio, language="en")
-        full_transcript.append(result["text"].strip())
+    # ← FIX: Ensure float division
+    segment_duration = float(segment_duration)
 
-    final_text = " ".join(full_transcript)
-    print(f"[Local Whisper] Done. Transcript length: {len(final_text)} chars")
-    return final_text
+    for seg in segments:
+        start = float(seg["start"])  # ← Force float
+        text = seg["text"].strip()
 
+        bucket_idx = min(int(start // segment_duration), num_chunks - 1)
+        chunks[bucket_idx] += " " + text
 
-# === Helper: Get audio duration ===
-def _get_audio_duration(audio_path: str) -> float:
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "json", audio_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    import json
-    data = json.loads(result.stdout)
-    return float(data["format"]["duration"])
-
-
-# === Helper: Extract a time chunk using ffmpeg ===
-def _extract_audio_chunk(audio_path: str, start: float, duration: float, index: int) -> str:
-    tmp_dir = Path(audio_path).parent / "tmp_chunks"
-    tmp_dir.mkdir(exist_ok=True)
-    chunk_path = str(tmp_dir / f"chunk_{uuid.uuid4().hex}.mp3")
-
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", audio_path,
-        "-ss", str(start),
-        "-t", str(duration),
-        "-acodec", "libmp3lame",
-        "-b:a", "64k",
-        "-ar", "16000",
-        "-ac", "1",
-        chunk_path
-    ]
-    try:
-        subprocess.run(cmd, check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Failed to extract chunk {index}: {e.stderr.decode() if e.stderr else 'Unknown'}")
-    return chunk_path
+    chunks = [c.strip() or "[silent]" for c in chunks]
+    print(f"[Whisper] Split into {len(chunks)} chunks of {segment_duration}s")
+    return full_transcript, chunks
 
 
 # === MODULE 4: Clean up temp file ===

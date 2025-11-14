@@ -8,8 +8,13 @@ from dotenv import load_dotenv
 from ..utils.analysis import (
     save_uploaded_video,
     extract_audio_to_wav,
-    transcribe_audio_chunks,
+    transcribe_and_split,
     cleanup_temp_file,
+)
+from ..utils.accuracy import (
+    _load_model, 
+    TextSimilarity,
+    get_similarity, batch_similarity, 
 )
 
 load_dotenv()  
@@ -17,6 +22,7 @@ load_dotenv()
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads/videos")
 BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 MODEL = os.getenv("MODEL_NAME")
+ANSWER_TIME = os.getenv("ANSWER_TIME", 40)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -42,13 +48,16 @@ async def upload_video(file: UploadFile = File(...)) -> Dict:
         print(audio_path)
 
         # 3. Transcribe
-        transcript = transcribe_audio_chunks(audio_path)
-        print("Transcript:", transcript)
+        full_transcript, segmented_chuks = transcribe_and_split(audio_path, segment_duration=ANSWER_TIME)
+        print("Transcript:", full_transcript, "\nSegmented Chunks: ", segmented_chuks)
+        
+        #4 Send To ML Model For Sound / Video Analysis
+        
 
-        # 4. Mock analysis
+        # 5. Mock analysis
         result = {
             "video_path": public_url,
-            "transcript": transcript,
+            # "transcript": transcript,
             "overall_score": 95,
             "emotions": {"happy": 50, "neutral": 45, "sad": 5}
         }
