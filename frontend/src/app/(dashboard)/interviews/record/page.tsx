@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import InterviewQuestions from "@/components/InterviewQuestions";
 import { useInterviewStore } from "@/store/interviewStore";
+import { ClipLoader } from 'react-spinners'
 
 // --- Types ---
 interface Interview {
@@ -79,6 +80,14 @@ const CategoryInterviewsPage: React.FC = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        return () => {
+            window.speechSynthesis.cancel();
+            if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+        };
+    }, []);
+
 
     // --- Interview handlers ---
     const handleStartInterview = () => {
@@ -157,8 +166,9 @@ const CategoryInterviewsPage: React.FC = () => {
         });
 
         try {
+            setLoading(true);
             const videoBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-            downloadVideo(videoBlob);
+            // downloadVideo(videoBlob);
 
             const formData = new FormData();
             formData.append("file", videoBlob, `interview-${Date.now()}.webm`);
@@ -167,7 +177,7 @@ const CategoryInterviewsPage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            console.log("Uploaded video URL:", response.data);
+            setLoading
             const { fastapi_response } = response.data;
             const video_path = fastapi_response.video_path;
             addAnalysis(fastapi_response);
@@ -175,12 +185,13 @@ const CategoryInterviewsPage: React.FC = () => {
             // Redirect to analysis page
             router.push(`/interviews/analysis?video=${encodeURIComponent(video_path)}`);
             setTimeout(() => {
-                window.location.reload();
+                // window.location.reload();
             }, 1000);
         } catch (error) {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
         } finally {
+            setLoading(false);
             recordedChunksRef.current = [];
         }
     };
@@ -233,65 +244,70 @@ const CategoryInterviewsPage: React.FC = () => {
 
     return (
         <div className="max-w-4xl mx-auto mt-6 p-4">
-            {/* Confirmation Modal */}
-            {showConfirmation && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6 text-center">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Start Your Interview?</h3>
-                        <p className="text-gray-600 mb-6">Ensure your camera and microphone are ready.</p>
-                        <div className="flex space-x-4">
-                            <button onClick={handleCancelInterview} className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">Go Back</button>
-                            <button onClick={handleStartInterview} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">Start Interview</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Camera & Recording */}
-            {interviewStarted && (
-                <>
-                    <div className="mb-8">
-                        <h2 className="text-xl font-semibold mb-4">Camera Preview</h2>
-                        {!isCameraReady ? (
-                            <div className="bg-gray-100 rounded-lg p-8 text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                                <p className="text-gray-600">Initializing camera...</p>
+            {loading ?
+                <div className="min-h-screen flex items-center justify-center">
+                    <ClipLoader color="#870a90" />
+                </div> : (<>
+                
+                    {/* Confirmation Modal */}
+                    {showConfirmation && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-md w-full p-6 text-center">
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Start Your Interview?</h3>
+                                <p className="text-gray-600 mb-6">Ensure your camera and microphone are ready.</p>
+                                <div className="flex space-x-4">
+                                    <button onClick={handleCancelInterview} className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">Go Back</button>
+                                    <button onClick={handleStartInterview} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">Start Interview</button>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="relative bg-black rounded-lg overflow-hidden">
-                                <video ref={videoRef} autoPlay muted playsInline className="w-full h-96 object-cover" />
-                                {isRecording && (
-                                    <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full flex items-center space-x-2">
-                                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                                        <span className="text-sm font-medium">{formatTime(recordingTime)}</span>
+                        </div>
+                    )}
+
+                    {/* Camera & Recording */}
+                    {interviewStarted && (
+                        <>
+                            <div className="mb-8">
+                                <h2 className="text-xl font-semibold mb-4">Camera Preview</h2>
+                                {!isCameraReady ? (
+                                    <div className="bg-gray-100 rounded-lg p-8 text-center">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                                        <p className="text-gray-600">Initializing camera...</p>
+                                    </div>
+                                ) : (
+                                    <div className="relative bg-black rounded-lg overflow-hidden">
+                                        <video ref={videoRef} autoPlay muted playsInline className="w-full h-96 object-cover" />
+                                        {isRecording && (
+                                            <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full flex items-center space-x-2">
+                                                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                                <span className="text-sm font-medium">{formatTime(recordingTime)}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+                                <div className="flex justify-center space-x-4 mt-6">
+                                    {!isRecording ? (
+                                        <button onClick={startRecording} disabled={!isCameraReady} className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium">Start Recording</button>
+                                    ) : (
+                                        <button onClick={stopRecording} className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium">Stop Recording</button>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        <div className="flex justify-center space-x-4 mt-6">
-                            {!isRecording ? (
-                                <button onClick={startRecording} disabled={!isCameraReady} className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium">Start Recording</button>
-                            ) : (
-                                <button onClick={stopRecording} className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium">Stop Recording</button>
-                            )}
+
+                            {/* Questions */}
+                            <InterviewQuestions
+                                speakQuestion={speakQuestion}
+                                interviewStarted={recordingStarted}
+                                recordingStopped={recordingStopped}
+                                reset={resetQuestions}
+                            />
+                        </>
+                    )}
+
+                    {!interviewStarted && !showConfirmation && (
+                        <div className="text-center py-12">
+                            <p className="text-gray-600">Interview session ended.</p>
                         </div>
-                    </div>
-
-                    {/* Questions */}
-                    <InterviewQuestions
-                        speakQuestion={speakQuestion}
-                        interviewStarted={recordingStarted}
-                        recordingStopped={recordingStopped}
-                        reset={resetQuestions}
-                    />
-                </>
-            )}
-
-            {!interviewStarted && !showConfirmation && (
-                <div className="text-center py-12">
-                    <p className="text-gray-600">Interview session ended.</p>
-                </div>
-            )}
+                    )} </>)}
         </div>
     );
 };

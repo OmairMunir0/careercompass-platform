@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/store/authStore";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Video } from "lucide-react";
 import Link from "next/link";
 
 export default function Hero() {
@@ -13,9 +13,11 @@ export default function Hero() {
             Connect Talent with
             <span className="block text-purple-200">Opportunity</span>
           </h1>
+
           <p className="text-xl md:text-2xl mb-8 text-purple-100 max-w-3xl mx-auto">
             SkillSeeker is the modern platform where talented professionals meet innovative
-            companies. Find your next career move or discover your next star employee.
+            companies. Find your next career move, discover your next star employee, or
+            prepare for interviews with AI-driven feedback.
           </p>
 
           {!isAuthenticated ? (
@@ -35,7 +37,7 @@ export default function Hero() {
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
               <Link
                 href="/timeline"
                 className="bg-white text-purple-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-purple-50 transition-colors inline-flex items-center justify-center"
@@ -43,14 +45,25 @@ export default function Hero() {
                 Go to Timeline
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
+
               {isCandidate && (
-                <Link
-                  href="/jobs"
-                  className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors"
-                >
-                  Browse Jobs
-                </Link>
+                <>
+                  <Link
+                    href="/interviews"
+                    className="bg-purple-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-purple-400 transition-colors inline-flex items-center justify-center"
+                  >
+                    <Video className="mr-2 w-5 h-5" />
+                    Practice Interview
+                  </Link>
+                  <Link
+                    href="/jobs"
+                    className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors"
+                  >
+                    Browse Jobs
+                  </Link>
+                </>
               )}
+
               {isRecruiter && (
                 <Link
                   href="/post-job"
