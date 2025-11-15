@@ -6,9 +6,19 @@ import { Readable } from "stream";
 
 export const uploadInterviewVideo = async (req: any, res: Response) => {
   try {
-    const file = req.file;
+    const questionsJson = req.query.questions as string || null;
+    const file = req.file
+    const categoryId: string = req.body?.categoryId as string || req.query?.categoryId as string;
+    let encodedQuestions = null;
+
     if (!file) {
       return res.status(400).json({ message: "No file uploaded" });
+    }
+    if (questionsJson) {
+      // Parse and re-encode questions for FastAPI
+      let questions;
+      questions = JSON.parse(decodeURIComponent(questionsJson));
+      encodedQuestions = encodeURIComponent(JSON.stringify(questions));
     }
 
     // Create a readable stream from buffer
@@ -21,7 +31,7 @@ export const uploadInterviewVideo = async (req: any, res: Response) => {
       knownLength: file.size,
     });
 
-    const response = await axios.post("http://127.0.0.1:8000/api/interview_video/upload", formData, {
+    const response = await axios.post(`http://127.0.0.1:8000/api/interview_video/upload?categoryId=${encodeURIComponent(categoryId)}&questions=${encodedQuestions}`, formData, {
       headers: {
         ...formData.getHeaders(),
       },

@@ -17,6 +17,14 @@ interface Interview {
     date: string;
 }
 
+interface InterviewQuestion {
+    _id: string;
+    question: string;
+    answer: string;
+    difficulty: string;
+    categoryId: string;
+}
+
 interface MediaRecorder {
     start(timeslice?: number): void;
     stop(): void;
@@ -25,17 +33,40 @@ interface MediaRecorder {
     state: 'inactive' | 'recording' | 'paused';
 }
 
+
+const loading_screen_comments = [
+    "😶 Checking if you're actually smiling or just panicking",
+    "🎤 Listening to your voice… pray it's clear 👀",
+    "✍️ Transcribing every 'umm' and 'uhh' you dropped",
+    "🧠 Comparing your answer with expert-level wisdom ✨",
+    "📊 Calculating how cooked you were in that question",
+    "😅 Measuring confidence… or lack of it",
+    "⏱️ Timing how fast you spoke — racehorse or snail?",
+    "🔍 Checking if you used any actual keywords 😂",
+    "⚙️ Putting everything together like a pro chef",
+    "🔥 Cooking your results… hope you're ready"
+];
+
+
 const CategoryInterviewsPage: React.FC = () => {
-    const { categoryId } = useParams();
+    const searchParams = useSearchParams();
     const { addAnalysis } = useInterviewStore();
+    
+    const categoryId = searchParams.get('categoryId');
+    const categoryName = searchParams.get('categoryName');
+    const decodedCategoryName = categoryName ? decodeURIComponent(categoryName) : null;
+
     const token = useAuthStore.getState().token;
     const router = useRouter();
 
-    const [interviews, setInterviews] = useState<Interview[]>([]);
+    // const [interviews, setInterviews] = useState<InterviewQuestion[]>([]);
+    const [InterviewQuestionFromChild, setInterviewQuestionFromChild] = useState<InterviewQuestion[]>([]);
     const [loading, setLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(true);
     const [interviewStarted, setInterviewStarted] = useState(false);
     const [videoPath, setvideoPath] = useState<any>(null);
+    const [currentComment, setCurrentComment] = useState(0);
+    const [isAnalyzing, setIsAnalyzing] = useState<Boolean>(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -62,24 +93,34 @@ const CategoryInterviewsPage: React.FC = () => {
         window.speechSynthesis.speak(utterance);
     };
 
-    // --- Fetch interviews ---
+    // --- Rotate every loading line
     useEffect(() => {
-        if (token && categoryId && interviewStarted) fetchInterviews();
-    }, [token, categoryId, interviewStarted]);
-
-    const fetchInterviews = async () => {
-        setLoading(true);
-        try {
-            const res = await axiosInstance.get(`/interviews?categoryId=${categoryId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setInterviews(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+        if (isAnalyzing) {
+            const interval = setInterval(() => {
+                setCurrentComment((prev) => (prev + 1) % loading_screen_comments.length)
+            }, 2000);
+            return () => clearInterval(interval)
         }
-    };
+    }, [isAnalyzing]);
+
+    // // --- Fetch interviews Questions ---
+    // useEffect(() => {
+    //     if (token && categoryId && interviewStarted) fetchInterviews();
+    // }, [token, categoryId, interviewStarted]);
+
+    // const fetchInterviews = async () => {
+    //     setLoading(true);
+    //     try {
+    //         const res = await axiosInstance.get(`/interviews-questions?categoryId=${categoryId}`, {
+    //             headers: { Authorization: `Bearer ${token}` },
+    //         });
+    //         setInterviews(res.data);
+    //     } catch (err) {
+    //         console.error(err);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
 
     useEffect(() => {
         return () => {
@@ -165,6 +206,8 @@ const CategoryInterviewsPage: React.FC = () => {
             recorder.stop();
         });
 
+        setIsAnalyzing(true);
+
         try {
             setLoading(true);
             const videoBlob = new Blob(recordedChunksRef.current, { type: "video/webm" });
@@ -173,17 +216,17 @@ const CategoryInterviewsPage: React.FC = () => {
             const formData = new FormData();
             formData.append("file", videoBlob, `interview-${Date.now()}.webm`);
 
-            const response = await axiosInstance.post("/interview-videos/upload", formData, {
+            console.log("Sending questions to backend:", InterviewQuestionFromChild);
+            const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            setLoading
             const { fastapi_response } = response.data;
             const video_path = fastapi_response.video_path;
             addAnalysis(fastapi_response);
 
             // Redirect to analysis page
-            router.push(`/interviews/analysis?video=${encodeURIComponent(video_path)}`);
+            router.push(`/interviews/analysis?categoryId=${categoryId}&video=${encodeURIComponent(video_path)}`);
             setTimeout(() => {
                 // window.location.reload();
             }, 1000);
@@ -191,6 +234,7 @@ const CategoryInterviewsPage: React.FC = () => {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
         } finally {
+            setIsAnalyzing(false);
             setLoading(false);
             recordedChunksRef.current = [];
         }
@@ -244,11 +288,14 @@ const CategoryInterviewsPage: React.FC = () => {
 
     return (
         <div className="max-w-4xl mx-auto mt-6 p-4">
-            {loading ?
-                <div className="min-h-screen flex items-center justify-center">
-                    <ClipLoader color="#870a90" />
-                </div> : (<>
-                
+            {loading || isAnalyzing ? (
+                <div className="min-h-screen flex flex-col items-center justify-center">
+                    <ClipLoader color="#870a90" size={90} />
+                    <p className="text-lg font-medium text-gray-700 animate-fade">
+                        {loading_screen_comments[currentComment]}
+                    </p>
+                </div>) : (<>
+
                     {/* Confirmation Modal */}
                     {showConfirmation && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -299,6 +346,9 @@ const CategoryInterviewsPage: React.FC = () => {
                                 interviewStarted={recordingStarted}
                                 recordingStopped={recordingStopped}
                                 reset={resetQuestions}
+                                onQuestionsLoaded={(questions: InterviewQuestion[]) => {
+                                    setInterviewQuestionFromChild(questions);
+                                }}
                             />
                         </>
                     )}

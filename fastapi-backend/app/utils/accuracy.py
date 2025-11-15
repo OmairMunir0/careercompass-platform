@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -120,6 +120,43 @@ def _run_self_test(
     print(f"Summary: {passed}/{len(cases)} passed")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %I:%M %p PKT')}")
     print("=" * 90)
+    
+    
+def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> List[Tuple[str, str]]:
+    if not questions_list:
+        return []
+
+    # Extract reference data
+    ref_texts = [q["question"] for q in questions_list]
+    ref_answers = {q["_id"]: q["answer"] for q in questions_list}
+
+    spoken_chunks = [c for c in segmented_chunks if c.strip().lower() != "[silent]"]
+    if not spoken_chunks:
+        return []
+    
+    print(spoken_chunks)
+
+    # Build all (chunk, ref_question) pairs
+    pairs = [(chunk, ref_text) for chunk in segmented_chunks for ref_text in ref_texts]
+
+    scores = batch_similarity(pairs)
+    print("Scores:", scores)
+
+    n_chunks = len(segmented_chunks)
+    n_refs = len(ref_texts)
+    score_matrix = np.array(scores).reshape(n_chunks, n_refs)
+
+    best_ref_idx = score_matrix.argmax(axis=1)
+
+    result_pairs = []
+    for chunk_idx, ref_idx in enumerate(best_ref_idx):
+        user_answer = segmented_chunks[chunk_idx]
+        qid = questions_list[ref_idx]["_id"]
+        ref_answer = ref_answers[qid]
+        result_pairs.append((user_answer, ref_answer))
+        
+        
+    return result_pairs
 
 
 if __name__ == "__main__":

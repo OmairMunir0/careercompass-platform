@@ -17,5 +17,5 @@ export const skillsData = {
   Management: ["Agile", "Scrum", "Project Management", "Team Leadership"],
   Testing: ["Jest", "Mocha", "Cypress", "Selenium"],
   Cybersecurity: ["Network Security", "Penetration Testing", "Cryptography"],
-  "IOS Development (Swift)": ["Swift", "Xcode", "UIKit", "Core Data"],
+  "IOS Developement (Swift)": ["Swift", "Xcode", "UIKit", "Core Data"],
 };

@@ -19,6 +19,7 @@ interface InterviewQuestionsProps {
   interviewStarted?: boolean;
   recordingStopped?: boolean;
   reset?: boolean;
+  onQuestionsLoaded?: any;
 }
 
 // --- Constants ---
@@ -30,6 +31,7 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
   interviewStarted,
   recordingStopped,
   reset,
+  onQuestionsLoaded,
 }) => {
   const searchParams = useSearchParams();
   const token = useAuthStore.getState().token;
@@ -57,7 +59,10 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
         headers: { Authorization: `Bearer ${token}` },
         params: { categoryId, categoryName },
       });
+      const fetched = res.data as InterviewQuestion[];
+
       setQuestions(res.data);
+      onQuestionsLoaded?.(fetched);
     } catch (err) {
       console.error("Error fetching interview questions:", err);
     } finally {

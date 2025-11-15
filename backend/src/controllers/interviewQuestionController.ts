@@ -30,7 +30,7 @@ export const createInterviewQuestion = async (req: Request, res: Response) => {
  */
 export const getInterviewQuestions = async (req: Request, res: Response) => {
   try {
-    const { categoryId, categoryName } = req.query;
+    const { categoryId } = req.query;
     console.log(categoryId);
 
     const filter = categoryId ? { categoryId } : {};
@@ -58,13 +58,15 @@ export const getInterviewQuestions = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Get an interview question by ID
- * @route GET /api/interview-questions/:questionId
+ * @desc Get an interview question by categoryId
+ * @route GET /api/interview-questions/:categoryId
  * @access Private
  */
 export const getInterviewQuestion = async (req: Request, res: Response) => {
   try {
-    const question = await InterviewQuestion.findById(req.params.questionId);
+    const { categoryId } = req.params || req.query; 
+
+    const question: any = await InterviewQuestion.findOne({ categoryId });
     if (!question) return res.status(404).json({ message: "Question not found" });
 
     res.json(question);

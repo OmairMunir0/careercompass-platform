@@ -1,9 +1,11 @@
 from __future__ import annotations
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Query, HTTPException
 import os
-from typing import Dict
+from typing import Dict, List
 from sentence_transformers import SentenceTransformer
 import openai
+import json
+import urllib.parse
 from dotenv import load_dotenv
 from ..utils.analysis import (
     save_uploaded_video,
@@ -14,7 +16,7 @@ from ..utils.analysis import (
 from ..utils.accuracy import (
     _load_model, 
     TextSimilarity,
-    get_similarity, batch_similarity, 
+    get_similarity, batch_similarity, get_accuracy
 )
 
 load_dotenv()  
@@ -32,36 +34,36 @@ model = SentenceTransformer(MODEL)
 
 
 @router.post("/upload")
-async def upload_video(file: UploadFile = File(...)) -> Dict:
+async def upload_video(file: UploadFile = File(...), 
+                       categoryId: str = Query(..., description="MongoDB category ID for the skill"),
+                       questions: str = Query(...)  ) -> List[Dict]:
     video_path = None
     audio_path = None
-
+    
     try:
         # 1. Save video
         video_path = save_uploaded_video(file)
         public_url = f"{BASE_URL}/videos/{file.filename}"
-
-        print(video_path)
+        questions_list = json.loads(urllib.parse.unquote(questions))
 
         # 2. Extract audio
         audio_path = extract_audio_to_wav(video_path)
-        print(audio_path)
 
         # 3. Transcribe
         full_transcript, segmented_chuks = transcribe_and_split(audio_path, segment_duration=ANSWER_TIME)
-        print("Transcript:", full_transcript, "\nSegmented Chunks: ", segmented_chuks)
         
-        #4 Send To ML Model For Sound / Video Analysis
+        #4 Fetch Accuracy
+        result = get_accuracy(segmented_chuks, questions_list)
+        print("Result:", result)
         
-
-        # 5. Mock analysis
-        result = {
+        dummy = {
             "video_path": public_url,
             # "transcript": transcript,
             "overall_score": 95,
             "emotions": {"happy": 50, "neutral": 45, "sad": 5}
         }
-        return result
+
+        return dummy
 
     except Exception as e:
         raise RuntimeError(f"Processing failed: {e}")

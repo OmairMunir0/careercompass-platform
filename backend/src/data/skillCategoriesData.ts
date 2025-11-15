@@ -7,5 +7,5 @@ export const skillCategoriesData = [
   "Management",
   "Testing",
   "Cybersecurity",
-  "IOS Development (Swift)",
+  "IOS Developement (Swift)",
 ];

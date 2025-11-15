@@ -20,10 +20,10 @@ router.post("/", authenticated, createInterviewQuestion);
 // @access  Private
 router.get("/", authenticated, getInterviewQuestions);
 
-// @route   GET /api/interview-questions/:questionId
-// @desc    Get an interview question by ID
+// @route   GET /api/interview-questions/:categoryId
+// @desc    Get an interview question by categoryId
 // @access  Private
-router.get("/:questionId", authenticated, getInterviewQuestion);
+router.get("/:categoryId", authenticated, getInterviewQuestion);
 
 // @route   PUT /api/interview-questions/:questionId
 // @desc    Update an interview question by ID
