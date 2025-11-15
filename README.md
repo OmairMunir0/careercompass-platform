@@ -121,7 +121,7 @@ mediapipe
 torch
 transformers
 sentence-transformers
-whisper
+openai-whisper
 language-tool-python
 numpy
 pandas
