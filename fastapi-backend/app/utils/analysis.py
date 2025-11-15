@@ -9,16 +9,27 @@ import subprocess
 import math
 from typing import List, Tuple, Dict
 import uuid
-import whisper
+import whisper  # Using openai-whisper package
 
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-whisper_model = whisper.load_model("base")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads/videos")
 BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 ANSWER_TIME = os.getenv("ANSWER_TIME", 40)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Lazy loading for Whisper model (only loads when needed)
+_whisper_model = None
+
+def get_whisper_model():
+    """Load Whisper model lazily - only when actually needed for transcription."""
+    global _whisper_model
+    if _whisper_model is None:
+        print("[Whisper] Loading model (this may take a moment and download if first time)...")
+        _whisper_model = whisper.load_model("base")
+        print("[Whisper] Model loaded successfully")
+    return _whisper_model
 
 
 # === MODULE 1: Save uploaded video ===
@@ -68,7 +79,8 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
         raise FileNotFoundError(f"Audio not found: {audio_path}")
 
     print(f"[Whisper] Transcribing: {audio_path}")
-    result = whisper_model.transcribe(
+    model = get_whisper_model()  # Lazy load model only when needed
+    result = model.transcribe(
         audio_path,
         word_timestamps=True,
     )

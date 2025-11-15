@@ -10,7 +10,7 @@ whisper
 # Video / Face Analysis (no mediapipe)
 # opencv-python>=4.10.0
 # deepface>=0.0.89  # Uses OpenCV + TF/Keras, not MediaPipe
-speech_recognition
+SpeechRecognition>=3.10.0
 
 # ML / Transformers
 # torch>=2.5.0 --index-url https://download.pytorch.org/whl/cpu
