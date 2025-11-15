@@ -36,7 +36,7 @@ model = SentenceTransformer(MODEL)
 @router.post("/upload")
 async def upload_video(file: UploadFile = File(...), 
                        categoryId: str = Query(..., description="MongoDB category ID for the skill"),
-                       questions: str = Query(...)  ) -> List[Dict]:
+                       questions: str = Query(...)  ) -> Dict:
     video_path = None
     audio_path = None
     
@@ -58,7 +58,8 @@ async def upload_video(file: UploadFile = File(...),
         
         dummy = {
             "video_path": public_url,
-            # "transcript": transcript,
+            "transcript": full_transcript,
+            "result": result,
             "overall_score": 95,
             "emotions": {"happy": 50, "neutral": 45, "sad": 5}
         }

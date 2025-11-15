@@ -3,6 +3,15 @@ import { persist } from "zustand/middleware";
 
 interface AnalysisResult {
   video_path: string;
+  transcript: string;
+  result: Array<{
+    question_id: string;
+    question: string;
+    user_answer: string;
+    reference_answer: string;
+    similarity: number;
+    percentage: number;
+  }>;
   overall_score: number;
   emotions: Record<string, number>;
 }
@@ -24,7 +33,7 @@ export const useInterviewStore = create<InterviewStore>()(
       clearAnalyses: () => set({ analysis: [] }),
     }),
     {
-      name: "interview-storage", 
+      name: "interview-storage",
       getStorage: () => localStorage,
     } as any
   )

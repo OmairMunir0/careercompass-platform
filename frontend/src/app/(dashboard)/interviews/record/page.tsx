@@ -51,7 +51,7 @@ const loading_screen_comments = [
 const CategoryInterviewsPage: React.FC = () => {
     const searchParams = useSearchParams();
     const { addAnalysis } = useInterviewStore();
-    
+
     const categoryId = searchParams.get('categoryId');
     const categoryName = searchParams.get('categoryName');
     const decodedCategoryName = categoryName ? decodeURIComponent(categoryName) : null;
@@ -59,7 +59,6 @@ const CategoryInterviewsPage: React.FC = () => {
     const token = useAuthStore.getState().token;
     const router = useRouter();
 
-    // const [interviews, setInterviews] = useState<InterviewQuestion[]>([]);
     const [InterviewQuestionFromChild, setInterviewQuestionFromChild] = useState<InterviewQuestion[]>([]);
     const [loading, setLoading] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(true);
@@ -102,25 +101,6 @@ const CategoryInterviewsPage: React.FC = () => {
             return () => clearInterval(interval)
         }
     }, [isAnalyzing]);
-
-    // // --- Fetch interviews Questions ---
-    // useEffect(() => {
-    //     if (token && categoryId && interviewStarted) fetchInterviews();
-    // }, [token, categoryId, interviewStarted]);
-
-    // const fetchInterviews = async () => {
-    //     setLoading(true);
-    //     try {
-    //         const res = await axiosInstance.get(`/interviews-questions?categoryId=${categoryId}`, {
-    //             headers: { Authorization: `Bearer ${token}` },
-    //         });
-    //         setInterviews(res.data);
-    //     } catch (err) {
-    //         console.error(err);
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // };
 
     useEffect(() => {
         return () => {
@@ -221,7 +201,8 @@ const CategoryInterviewsPage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            const { fastapi_response } = response.data;
+            const fastapi_response = response.data;
+
             const video_path = fastapi_response.video_path;
             addAnalysis(fastapi_response);
 
