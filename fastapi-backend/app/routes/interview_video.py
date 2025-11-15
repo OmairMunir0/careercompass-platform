@@ -68,5 +68,12 @@ async def upload_video(file: UploadFile = File(...),
     except Exception as e:
         raise RuntimeError(f"Processing failed: {e}")
     finally:
-        # Always clean up
+        # Always clean up temporary files
         cleanup_temp_file(audio_path)
+        # Delete the uploaded video file after processing
+        if video_path and os.path.exists(video_path):
+            try:
+                os.unlink(video_path)
+                print(f"[Cleanup] Deleted video file: {video_path}")
+            except Exception as e:
+                print(f"[Cleanup] Warning: Failed to delete video file {video_path}: {e}")
