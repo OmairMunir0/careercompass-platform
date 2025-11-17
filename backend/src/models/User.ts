@@ -17,6 +17,7 @@ export interface IUser extends Document {
   companyWebsite: string | null;
   position: string | null;
   imageUrl: string | null;
+  resumeUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +40,7 @@ export const UserSchema = new Schema<IUser>(
     companyWebsite: { type: String, default: null },
     position: { type: String, default: null },
     imageUrl: { type: String, default: null },
+    resumeUrl: { type: String, default: null },
   },
   { timestamps: true }
 );

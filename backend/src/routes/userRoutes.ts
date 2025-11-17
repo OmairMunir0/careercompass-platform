@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
   addProfileImage,
+  addResume,
   deleteUser,
+  downloadResume,
   getCandidates,
   getMe,
   getUser,
@@ -9,6 +11,7 @@ import {
   getUsers,
   getUsersByRole,
   removeProfileImage,
+  removeResume,
   updateMe,
   updateUser,
 } from "../controllers/userController";
@@ -17,6 +20,10 @@ import { upload } from "../middleware/upload";
 
 const router = Router();
 
+// Public route - Resume download (must be before authenticated routes)
+router.get("/:userId/resume", downloadResume);
+
+// Authenticated routes
 router.use(authenticated);
 
 router.get("/me", getMe);
@@ -25,6 +32,8 @@ router.put("/me", updateMe);
 
 router.post("/me/profile-image", upload.single("profileImage"), addProfileImage);
 router.delete("/me/profile-image", removeProfileImage);
+router.post("/me/resume", upload.single("profileResume"), addResume);
+router.delete("/me/resume", removeResume);
 
 // Specific first
 router.get("/candidates", getCandidates);

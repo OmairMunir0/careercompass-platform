@@ -97,6 +97,20 @@ export const userService = {
     return response.data;
   },
 
+  addResume: async (file: File) => {
+    const formData = new FormData();
+    formData.append("profileResume", file);
+    const response = await axiosInstance.post("/users/me/resume", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  removeResume: async () => {
+    const response = await axiosInstance.delete("/users/me/resume");
+    return response.data;
+  },
+
   getUsers: async (query?: GetUsersQuery) => {
     const params = {
       role: query?.role,

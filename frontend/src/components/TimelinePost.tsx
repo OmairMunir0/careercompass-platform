@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Heart, MessageSquare, Share2, ThumbsUp, Trash } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 import ShareModal from "./ShareModal";
 
 interface User {
@@ -112,8 +113,14 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
     }
   };
 
+  const router = useRouter();
   const formattedDate = createdAt ? formatDistanceToNow(new Date(createdAt), { addSuffix: true }) : "";
   const isCurrentUserPost = currentUser?._id === user._id;
+
+  const handleProfileClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/profile/${user._id}`);
+  };
 
   console.log(formattedDate);
 
@@ -121,7 +128,10 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
     <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 mb-6 overflow-hidden">
       {/* Post Header */}
       <div className="flex items-center p-5">
-        <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
+        <button
+          onClick={handleProfileClick}
+          className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100 hover:ring-purple-300 transition-all cursor-pointer"
+        >
           {user.profileImage ? (
             <Image 
               src={user.profileImage} 
@@ -135,11 +145,14 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
               {user.firstName?.[0] || ""}{user.lastName?.[0] || ""}
             </div>
           )}
-        </div>
-        <div className="ml-3 flex-grow">
+        </button>
+        <button
+          onClick={handleProfileClick}
+          className="ml-3 flex-grow text-left hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <div className="font-semibold text-gray-900">{user.firstName} {user.lastName}</div>
           <div className="text-xs text-gray-500">{formattedDate}</div>
-        </div>
+        </button>
         {isCurrentUserPost && (
           <button 
             onClick={() => onDelete(id)}
@@ -257,7 +270,13 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           <div className="space-y-4">
             {comments.map((comment, index) => (
               <div key={comment._id || index} className="flex gap-3">
-                <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (comment.user?._id) router.push(`/profile/${comment.user._id}`);
+                  }}
+                  className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100 hover:ring-purple-300 transition-all cursor-pointer"
+                >
                   {comment.user?.profileImage ? (
                     <Image 
                       src={comment.user.profileImage} 
@@ -271,10 +290,18 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                       {comment.user?.firstName?.[0] || ""}{comment.user?.lastName?.[0] || ""}
                     </div>
                   )}
-                </div>
+                </button>
                 <div className="flex-grow min-w-0">
                   <div className="bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
-                    <div className="font-semibold text-sm text-gray-900 mb-1">{comment.user?.firstName || ""} {comment.user?.lastName || ""}</div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (comment.user?._id) router.push(`/profile/${comment.user._id}`);
+                      }}
+                      className="font-semibold text-sm text-gray-900 mb-1 hover:text-purple-600 transition-colors cursor-pointer"
+                    >
+                      {comment.user?.firstName || ""} {comment.user?.lastName || ""}
+                    </button>
                     <p className="text-sm text-gray-800 leading-relaxed">{comment.content}</p>
                   </div>
                   <div className="flex items-center gap-4 mt-2">
@@ -346,7 +373,13 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                     <div className="mt-3 ml-6 space-y-3 border-l-4 border-purple-200 pl-4 bg-purple-50/30 rounded-r-lg py-2">
                       {comment.replies.map((reply, replyIndex) => (
                         <div key={reply._id || replyIndex} className="flex gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-purple-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (reply.user?._id) router.push(`/profile/${reply.user._id}`);
+                            }}
+                            className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-purple-100 hover:ring-purple-300 transition-all cursor-pointer"
+                          >
                             {reply.user?.profileImage ? (
                               <Image 
                                 src={reply.user.profileImage} 
@@ -360,10 +393,18 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                                 {reply.user?.firstName?.[0] || ""}{reply.user?.lastName?.[0] || ""}
                               </div>
                             )}
-                          </div>
+                          </button>
                           <div className="flex-grow min-w-0">
                             <div className="bg-white rounded-lg px-3 py-2 shadow-sm border border-purple-100">
-                              <div className="font-semibold text-xs text-gray-900 mb-0.5">{reply.user?.firstName || ""} {reply.user?.lastName || ""}</div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (reply.user?._id) router.push(`/profile/${reply.user._id}`);
+                                }}
+                                className="font-semibold text-xs text-gray-900 mb-0.5 hover:text-purple-600 transition-colors cursor-pointer"
+                              >
+                                {reply.user?.firstName || ""} {reply.user?.lastName || ""}
+                              </button>
                               <p className="text-xs text-gray-800 leading-relaxed">{reply.content}</p>
                             </div>
                             <div className="text-xs text-gray-500 mt-1.5 ml-1">
