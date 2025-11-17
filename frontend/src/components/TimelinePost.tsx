@@ -134,7 +134,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
         >
           {user.profileImage ? (
             <Image 
-              src={user.profileImage} 
+              src={user.profileImage.startsWith('http') ? user.profileImage : `http://localhost:3001${user.profileImage}`}
               alt={`${user.firstName} ${user.lastName}`} 
               width={48} 
               height={48} 
@@ -172,7 +172,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
       {imageUrl && (
         <div className="w-full">
           <img 
-            src={imageUrl} 
+            src={imageUrl.startsWith('http') ? imageUrl : `http://localhost:3001${imageUrl}`}
             alt="Post image" 
             className="w-full object-cover max-h-96"
           />
@@ -230,7 +230,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
             <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
               {currentUser?.profileImage ? (
                 <Image 
-                  src={currentUser.profileImage} 
+                  src={currentUser.profileImage.startsWith('http') ? currentUser.profileImage : `http://localhost:3001${currentUser.profileImage}`}
                   alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`} 
                   width={40} 
                   height={40} 
@@ -279,7 +279,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                 >
                   {comment.user?.profileImage ? (
                     <Image 
-                      src={comment.user.profileImage} 
+                      src={comment.user.profileImage.startsWith('http') ? comment.user.profileImage : `http://localhost:3001${comment.user.profileImage}`}
                       alt={`${comment.user?.firstName || ""} ${comment.user?.lastName || ""}`} 
                       width={40} 
                       height={40} 
@@ -382,7 +382,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                           >
                             {reply.user?.profileImage ? (
                               <Image 
-                                src={reply.user.profileImage} 
+                                src={reply.user.profileImage.startsWith('http') ? reply.user.profileImage : `http://localhost:3001${reply.user.profileImage}`}
                                 alt={`${reply.user?.firstName || ""} ${reply.user?.lastName || ""}`} 
                                 width={32} 
                                 height={32} 

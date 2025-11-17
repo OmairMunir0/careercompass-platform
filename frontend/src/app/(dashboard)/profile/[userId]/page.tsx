@@ -109,7 +109,7 @@ const UserProfilePage: React.FC = () => {
               <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-4 ring-purple-100">
                 {profileUser.imageUrl ? (
                   <Image
-                    src={profileUser.imageUrl}
+                    src={profileUser.imageUrl.startsWith('http') ? profileUser.imageUrl : `http://localhost:3001${profileUser.imageUrl}`}
                     alt={`${profileUser.firstName} ${profileUser.lastName}`}
                     width={64}
                     height={64}
