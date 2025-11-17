@@ -14,6 +14,7 @@ const subfoldersMap: Record<string, string> = {
   profileImage: "profile-images",
   postImage: "post-images",
   certificate: "certificates",
+  blogImage: "blog-images",
 };
 
 const storage = multer.diskStorage({

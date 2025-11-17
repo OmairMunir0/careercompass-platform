@@ -1,3 +1,4 @@
+export { Blog } from "./Blog";
 export { Chat } from "./Chat";
 export { ExperienceLevel } from "./ExperienceLevel";
 export { JobApplication } from "./JobApplication";
@@ -22,6 +23,7 @@ export { WorkMode } from "./WorkMode";
 export { InterviewQuestion } from "./InterviewQuestion";
 
 
+export type { IBlog } from "./Blog";
 export type { IChat } from "./Chat";
 export type { IExperienceLevel } from "./ExperienceLevel";
 export type { IJobApplication } from "./JobApplication";

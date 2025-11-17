@@ -16,7 +16,7 @@ export async function ensureUploadDirs() {
 
   await ensureFolder(uploadsDir);
 
-  const subfolders = ["resumes", "post-images", "profile-images", "certificates"];
+  const subfolders = ["resumes", "post-images", "profile-images", "certificates", "blog-images"];
 
   for (const sub of subfolders) {
     const folderPath = path.join(uploadsDir, sub);
