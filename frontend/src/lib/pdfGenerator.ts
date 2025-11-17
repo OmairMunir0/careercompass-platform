@@ -43,11 +43,14 @@ export const generateInterviewCertificate = (
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(margin, margin, contentWidth, contentHeight, 5, 5, 'F');
 
-  // Title
+  // Determine if score is passing (>= 80%)
+  const isPassing = analysis.overall_score >= 80;
+  
+  // Title - different based on score
   doc.setTextColor(147, 51, 234);
   doc.setFontSize(36);
   doc.setFont('helvetica', 'bold');
-  doc.text('CERTIFICATE OF COMPLETION', pageWidth / 2, 50, { align: 'center' });
+  doc.text(isPassing ? 'CERTIFICATE OF COMPLETION' : 'PRACTICE SESSION REPORT', pageWidth / 2, 50, { align: 'center' });
 
   // Subtitle
   doc.setTextColor(100, 100, 100);
@@ -67,33 +70,46 @@ export const generateInterviewCertificate = (
   doc.setFont('helvetica', 'bold');
   doc.text(fullName, pageWidth / 2, 95, { align: 'center' });
 
-  // Has successfully completed
+  // Completion message - different based on score
   doc.setTextColor(60, 60, 60);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'normal');
-  doc.text('has successfully completed an interview practice session', pageWidth / 2, 110, { align: 'center' });
+  if (isPassing) {
+    doc.text('has successfully completed an interview practice session', pageWidth / 2, 110, { align: 'center' });
+  } else {
+    doc.text('has completed an interview practice session', pageWidth / 2, 110, { align: 'center' });
+    // Additional improvement message
+    doc.setTextColor(220, 38, 38); // Red color for improvement needed
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Keep practicing to improve your performance!', pageWidth / 2, 118, { align: 'center' });
+  }
 
-  // Score section
+  // Score section - adjust Y position based on message
+  const scoreBoxY = isPassing ? 120 : 128;
   doc.setFillColor(240, 240, 240);
-  doc.roundedRect(pageWidth / 2 - 40, 120, 80, 30, 3, 3, 'F');
+  doc.roundedRect(pageWidth / 2 - 40, scoreBoxY, 80, 30, 3, 3, 'F');
   
   doc.setTextColor(100, 100, 100);
   doc.setFontSize(12);
-  doc.text('Overall Performance Score', pageWidth / 2, 130, { align: 'center' });
+  doc.text('Overall Performance Score', pageWidth / 2, scoreBoxY + 10, { align: 'center' });
   
-  doc.setTextColor(147, 51, 234);
+  // Score color based on passing/failing
+  const scoreColor = isPassing ? [147, 51, 234] : [220, 38, 38]; // Purple for pass, red for fail
+  doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
   doc.setFontSize(32);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${analysis.overall_score}%`, pageWidth / 2, 145, { align: 'center' });
+  doc.text(`${analysis.overall_score}%`, pageWidth / 2, scoreBoxY + 25, { align: 'center' });
 
-  // Emotion breakdown
+  // Emotion breakdown - adjust Y position based on score box
+  const emotionStartY = isPassing ? 160 : 168;
   doc.setTextColor(60, 60, 60);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text('Emotion Analysis:', pageWidth / 2 - 60, 160, { align: 'left' });
+  doc.text('Emotion Analysis:', pageWidth / 2 - 60, emotionStartY, { align: 'left' });
 
   const emotions = Object.entries(analysis.emotions);
-  const startY = 170;
+  const startY = emotionStartY + 10;
   const colWidth = 50;
   let x = pageWidth / 2 - 60;
   let y = startY;
@@ -128,7 +144,8 @@ export const generateInterviewCertificate = (
   doc.text('SkillSeeker - Career Compass Platform', pageWidth / 2, pageHeight - 15, { align: 'center' });
 
   // Save the PDF
-  const fileName = `Interview_Certificate_${user.firstName}_${user.lastName}_${date.getTime()}.pdf`;
+  const fileNamePrefix = isPassing ? 'Interview_Certificate' : 'Interview_Report';
+  const fileName = `${fileNamePrefix}_${user.firstName}_${user.lastName}_${date.getTime()}.pdf`;
   doc.save(fileName);
 };
 

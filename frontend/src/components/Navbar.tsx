@@ -14,6 +14,7 @@ import {
   Search,
   User,
   X,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,6 +57,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] =
   else if (role === "admin") {
     return [
       { href: "/admin/dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
+      { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/blogs", label: "Blogs", icon: BookOpen },
       { href: "/admin/users", label: "Manage Users", icon: User },
       { href: "/admin/job-posts", label: "Manage Job Posts", icon: Briefcase },

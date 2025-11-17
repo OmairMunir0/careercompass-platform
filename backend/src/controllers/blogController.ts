@@ -104,7 +104,6 @@ export const createBlog = async (req: Request, res: Response) => {
     // Handle image upload
     let imageUrl: string | null = null;
     if (req.file) {
-      // For now, use local storage. Can be extended to Cloudinary
       imageUrl = `/uploads/blog-images/${req.file.filename}`;
     }
 

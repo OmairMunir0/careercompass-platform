@@ -24,6 +24,7 @@ import workModeRoutes from "./workModeRoutes";
 import interviewQuestionRoutes from "./interviewQuestionsRoutes";
 import interviewVideoRoutes from "./interviewVideoRoutes";
 import blogRoutes from "./blogRoutes";
+import analyticsRoutes from "./analyticsRoutes";
 
 const router = Router();
 
@@ -51,5 +52,6 @@ router.use("/work-modes", workModeRoutes);
 router.use("/interview-questions", interviewQuestionRoutes);
 router.use("/interview-videos", interviewVideoRoutes);
 router.use("/blogs", blogRoutes);
+router.use("/analytics", analyticsRoutes);
 
 export default router;
