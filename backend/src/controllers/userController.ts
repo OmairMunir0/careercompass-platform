@@ -259,9 +259,11 @@ export const addProfileImage = async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
+    const imageUrl = `/uploads/profile-images/${req.file.filename}`;
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { imageUrl: `/uploads/profile-images/${req.file.filename}` },
+      { imageUrl },
       { new: true }
     );
 
@@ -294,6 +296,90 @@ export const removeProfileImage = async (req: Request, res: Response) => {
     await user.save();
 
     res.status(200).json({ message: "Profile image removed", data: { imageUrl: null } });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * @desc Upload resume
+ * @route POST /api/users/me/resume
+ * @access Private
+ */
+export const addResume = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    // Delete old resume if exists
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.resumeUrl) {
+      const filePath = path.join(process.cwd(), user.resumeUrl);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    const resumeUrl = `/uploads/resume-uploads/${req.file.filename}`;
+
+    user.resumeUrl = resumeUrl;
+    await user.save();
+
+    res.status(200).json({ message: "Resume uploaded", data: { resumeUrl: user.resumeUrl } });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * @desc Remove resume
+ * @route DELETE /api/users/me/resume
+ * @access Private
+ */
+export const removeResume = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.resumeUrl) {
+      const filePath = path.join(process.cwd(), user.resumeUrl);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    user.resumeUrl = null;
+    await user.save();
+
+    res.status(200).json({ message: "Resume removed", data: { resumeUrl: null } });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * @desc Download resume by user ID
+ * @route GET /api/users/:userId/resume
+ * @access Public
+ */
+export const downloadResume = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.resumeUrl) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    const filePath = path.join(process.cwd(), user.resumeUrl);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Resume file not found" });
+    }
+
+    const fileName = `${user.firstName}_${user.lastName}_Resume.pdf`;
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Type", "application/pdf");
+    res.sendFile(filePath);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

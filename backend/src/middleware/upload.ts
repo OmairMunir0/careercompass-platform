@@ -11,6 +11,7 @@ function ensureFolderSync(folder: string) {
 
 const subfoldersMap: Record<string, string> = {
   resume: "resumes",
+  profileResume: "resume-uploads",
   profileImage: "profile-images",
   postImage: "post-images",
   certificate: "certificates",
@@ -31,6 +32,17 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+  // For profile resumes, only allow PDF
+  if (file.fieldname === "profileResume") {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are allowed for resumes"));
+    }
+    return;
+  }
+
+  // For other file types
   const allowedMimeTypes = [
     "image/jpeg",
     "image/png",
