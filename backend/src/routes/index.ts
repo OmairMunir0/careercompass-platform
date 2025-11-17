@@ -23,6 +23,7 @@ import userSkillRoutes from "./userSkillRoutes";
 import workModeRoutes from "./workModeRoutes";
 import interviewQuestionRoutes from "./interviewQuestionsRoutes";
 import interviewVideoRoutes from "./interviewVideoRoutes";
+import blogRoutes from "./blogRoutes";
 
 const router = Router();
 
@@ -49,5 +50,6 @@ router.use("/user-skills", userSkillRoutes);
 router.use("/work-modes", workModeRoutes);
 router.use("/interview-questions", interviewQuestionRoutes);
 router.use("/interview-videos", interviewVideoRoutes);
+router.use("/blogs", blogRoutes);
 
 export default router;
