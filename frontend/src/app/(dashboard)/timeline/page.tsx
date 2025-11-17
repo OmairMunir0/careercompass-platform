@@ -7,6 +7,8 @@ import { toast } from "react-hot-toast";
 import TimelinePost from "@/components/TimelinePost";
 import PostComposer from "@/components/PostComposer";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import UserProfileCard from "@/components/UserProfileCard";
+import RightSidebar from "@/components/RightSidebar";
 
 interface User {
   _id: string;
@@ -276,47 +278,62 @@ const Timeline: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Timeline</h1>
-      
-      {/* Post Composer */}
-      <PostComposer 
-        user={user} 
-        onSubmit={handlePost} 
-        isSubmitting={submitting} 
-      />
-      
-      {/* Posts List */}
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <LoadingSpinner />
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <p className="text-gray-500">No posts yet. Be the first to share something!</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <TimelinePost
-              key={post._id}
-              id={post._id}
-              user={post.user}
-              content={post.content}
-              imageUrl={post.imageUrl}
-              likes={post.likes}
-              comments={post.comments}
-              createdAt={post.createdAt}
-              isLiked={!!likedPosts[post._id]}
-              currentUser={user}
-              onLike={toggleLike}
-              onComment={handleCommentSubmit}
-              onReply={handleReplySubmit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
+    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Sidebar */}
+        <aside className="lg:col-span-3 hidden lg:block">
+          <UserProfileCard />
+        </aside>
+
+        {/* Main Content */}
+        <main className="lg:col-span-6">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-6">Timeline</h1>
+          
+          {/* Post Composer */}
+          <PostComposer 
+            user={user} 
+            onSubmit={handlePost} 
+            isSubmitting={submitting} 
+          />
+          
+          {/* Posts List */}
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <LoadingSpinner />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <p className="text-gray-500">No posts yet. Be the first to share something!</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <TimelinePost
+                  key={post._id}
+                  id={post._id}
+                  user={post.user}
+                  content={post.content}
+                  imageUrl={post.imageUrl}
+                  likes={post.likes}
+                  comments={post.comments}
+                  createdAt={post.createdAt}
+                  isLiked={!!likedPosts[post._id]}
+                  currentUser={user}
+                  onLike={toggleLike}
+                  onComment={handleCommentSubmit}
+                  onReply={handleReplySubmit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="lg:col-span-3 hidden lg:block">
+          <RightSidebar />
+        </aside>
+      </div>
     </div>
   );
 };

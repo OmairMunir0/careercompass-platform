@@ -9,6 +9,7 @@ import {
   getMyPosts,
   getPostById,
   getRecentPosts,
+  getTrendingPosts,
   likePost,
   unlikePost,
   updatePost,
@@ -37,6 +38,11 @@ router.get("/me", authenticated, getMyPosts);
 // @desc    Get recent posts (admin dashboard)
 // @access  Private (Admin)
 router.get("/recent", authenticated, requireRole(["recruiter"]), getRecentPosts);
+
+// @route   GET /api/posts/trending
+// @desc    Get trending posts (most liked and commented)
+// @access  Public
+router.get("/trending", getTrendingPosts);
 
 // @route   GET /api/posts/:postId
 // @desc    Get a single post by ID

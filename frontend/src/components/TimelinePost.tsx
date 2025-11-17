@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Heart, MessageSquare, Share2, ThumbsUp, Trash } from "lucide-react";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
+import ShareModal from "./ShareModal";
 
 interface User {
   _id: string;
@@ -57,20 +58,14 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
   onReply,
   onDelete,
 }) => {
-  // Show comments by default if there are any
-  const [showComments, setShowComments] = useState(comments.length > 0);
+  // Comments are hidden by default
+  const [showComments, setShowComments] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyTexts, setReplyTexts] = useState<Record<string, string>>({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState<Record<string, boolean>>({});
-
-  // Automatically show comments when they're added to a post that previously had none
-  useEffect(() => {
-    if (comments.length > 0 && !showComments) {
-      setShowComments(true);
-    }
-  }, [comments.length, showComments]);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +200,10 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           <MessageSquare size={20} className="mr-2" />
           <span className="font-medium">Comment</span>
         </button>
-        <button className="flex items-center justify-center py-2.5 px-6 rounded-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 text-gray-600 hover:text-purple-600">
+        <button 
+          onClick={() => setShowShareModal(true)}
+          className="flex items-center justify-center py-2.5 px-6 rounded-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 text-gray-600 hover:text-purple-600"
+        >
           <Share2 size={20} className="mr-2" />
           <span className="font-medium">Share</span>
         </button>
@@ -382,6 +380,16 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           </div>
         </div>
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        postId={id}
+        postContent={content}
+        authorName={`${user.firstName} ${user.lastName}`}
+        postImageUrl={imageUrl}
+      />
     </div>
   );
 };

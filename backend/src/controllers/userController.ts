@@ -298,3 +298,32 @@ export const removeProfileImage = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/**
+ * @desc Get user statistics (posts count, interviews, etc.)
+ * @route GET /api/users/me/stats
+ * @access Private
+ */
+export const getUserStats = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const { Post } = await import("../models/Post");
+    
+    const postsCount = await Post.countDocuments({ user: req.user.id });
+    
+    // For interviews, we'll return a placeholder since interviews are stored in frontend
+    // In a real implementation, you'd have an Interview model
+    const interviewsCount = 0; // TODO: Implement when Interview model is added
+
+    res.status(200).json({
+      data: {
+        postsCount,
+        interviewsCount,
+        // Add more stats as needed
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -285,6 +285,32 @@ export const addReply = async (req: Request, res: Response) => {
  * @route GET /api/posts/recent
  * @access Private (Admin)
  */
+/**
+ * @desc Get trending posts (most liked and commented)
+ * @route GET /api/posts/trending
+ * @access Public
+ */
+export const getTrendingPosts = async (_req: Request, res: Response) => {
+  try {
+    const posts = await Post.find()
+      .populate("user", "firstName lastName email imageUrl")
+      .populate({
+        path: "comments.user",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      })
+      .sort({ likes: -1, "comments.length": -1 })
+      .limit(5);
+
+    res.status(200).json(posts);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const getRecentPosts = async (_req: Request, res: Response) => {
   try {
     const posts = await Post.find()

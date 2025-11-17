@@ -5,6 +5,7 @@ import {
   deleteJobPost,
   findJobs,
   getJobPost,
+  getJobRecommendations,
   getMyJobPosts,
   getRecentJobPosts,
   toggleJobPostStatus,
@@ -33,6 +34,11 @@ router.get("/me", authenticated, getMyJobPosts);
 // @desc    Get recently created job posts (for dashboard)
 // @access  Private (Admin/Recruiter)
 router.get("/recent", authenticated, getRecentJobPosts);
+
+// @route   GET /api/job-posts/recommendations
+// @desc    Get job recommendations for user
+// @access  Private
+router.get("/recommendations", authenticated, getJobRecommendations);
 
 // @route   GET /api/job-posts/:jobPostId
 // @desc    Get a single job post by ID
