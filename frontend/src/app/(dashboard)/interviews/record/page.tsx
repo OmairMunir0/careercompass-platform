@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
@@ -201,7 +201,7 @@ const CategoryInterviewsPage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            const fastapi_response = response.data;
+            const fastapi_response = response.data.fastapi_response;
 
             const video_path = fastapi_response.video_path;
             addAnalysis(fastapi_response);

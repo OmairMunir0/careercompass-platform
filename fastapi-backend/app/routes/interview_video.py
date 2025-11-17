@@ -53,17 +53,17 @@ async def upload_video(file: UploadFile = File(...),
         full_transcript, segmented_chuks = transcribe_and_split(audio_path, segment_duration=ANSWER_TIME)
         
         #4 Fetch Accuracy
-        result = get_accuracy(segmented_chuks, questions_list)
-        print("Result:", result)
-        
+        analysis = get_accuracy(segmented_chuks, questions_list)
+
         dummy = {
             "video_path": public_url,
             "transcript": full_transcript,
-            "result": result,
-            "overall_score": 95,
+            "result": analysis["result"],         
+            "overall_score": analysis["overall_score"], 
             "emotions": {"happy": 50, "neutral": 45, "sad": 5}
         }
 
+        print("Final Response:", dummy)
         return dummy
 
     except Exception as e:

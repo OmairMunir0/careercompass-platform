@@ -11,6 +11,7 @@ interface AnalysisResult {
     reference_answer: string;
     similarity: number;
     percentage: number;
+    overall_score: number;
   }>;
   overall_score: number;
   emotions: Record<string, number>;

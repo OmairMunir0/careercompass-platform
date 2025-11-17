@@ -1,9 +1,3 @@
-"""
-app/utils/accuracy.py
-~~~~~~~~~~~~~~~~~~~~~
-Sentence-Transformer similarity (e5-large-v2) – singleton, lazy-loaded.
-"""
-
 from __future__ import annotations
 
 import os
@@ -123,55 +117,52 @@ def _run_self_test(
     print("=" * 90)
     
     
-def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> List[dict]:
-
+def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> Dict:
     if not questions_list:
-        return []
+        return {"result": [], "overall_score": 0.0}
 
-    n_questions = len(questions_list)
     result = []
+    valid_scores = []
 
-    # ------------------------------------------------------------------
-    # 1. Process each chunk in order
-    # ------------------------------------------------------------------
-    for i in range(n_questions):
-        # Get user answer (or empty if out of range)
+    for i, q in enumerate(questions_list):
         user_ans = ""
         if i < len(segmented_chunks):
             raw = segmented_chunks[i].strip()
             if raw.lower() != "[silent]":
                 user_ans = raw
 
-        # Get reference
-        q = questions_list[i]
         ref_ans = q["answer"]
 
-        # ------------------------------------------------------------------
-        # 2. Skip similarity if silent
-        # ------------------------------------------------------------------
         if not user_ans:
             similarity = 0.0
-            percentage = 0.0
         else:
-            # Compute 1-to-1 similarity
             similarity = batch_similarity([(user_ans, ref_ans)])[0]
-            percentage = round(similarity * 100, 2)
-            similarity = round(similarity, 4)
+            if similarity < 0.40:
+                similarity = 0.0
 
-        # ------------------------------------------------------------------
-        # 3. Add to result
-        # ------------------------------------------------------------------
+        similarity = round(similarity, 4)
+        percentage = round(similarity * 100, 2)
+
+        if user_ans:
+            valid_scores.append(similarity)
+
         result.append({
             "question_id": q["_id"],
             "question": q["question"],
             "user_answer": user_ans,
             "reference_answer": ref_ans,
             "similarity": similarity,
-            "percentage": percentage
+            "percentage": percentage,
         })
 
-    return result
+    # REAL overall score
+    overall_score = round(sum(valid_scores) / len(valid_scores) * 100, 2) if valid_scores else 0.0
 
+    return {
+        "result": result,
+        "overall_score": overall_score
+    }
+    
 
 if __name__ == "__main__":
     _run_self_test()
