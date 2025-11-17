@@ -16,10 +16,18 @@ interface User {
   profileImage?: string;
 }
 
+interface Reply {
+  _id?: string;
+  user: User;
+  content: string;
+  createdAt?: string;
+}
+
 interface Comment {
   _id?: string;
   user: User;
   content: string;
+  replies?: Reply[];
   createdAt?: string;
 }
 
@@ -105,32 +113,157 @@ const Timeline: React.FC = () => {
   };
 
   const handleCommentSubmit = async (postId: string, content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !user) return;
+
+    // Optimistic update - add comment immediately
+    const optimisticComment: Comment = {
+      _id: `temp-${Date.now()}`,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      replies: [],
+    };
+
+    setPosts((prev) =>
+      prev.map((p) => 
+        p._id === postId 
+          ? { ...p, comments: [...p.comments, optimisticComment] }
+          : p
+      )
+    );
 
     try {
       const res = await axiosInstance.post(`/posts/${postId}/comments`, { content });
 
-      // Assuming the API returns the post object with updated comments
-      const newComment = res.data.post.comments[res.data.post.comments.length - 1];
-
-      // merge current user info if needed
-      const mergedComment = {
-        ...newComment,
-        user: {
-          ...newComment.user,
-          firstName: user?.firstName ?? "",
-          lastName: user?.lastName ?? "",
-          email: user?.email ?? "",
-        },
+      // Replace optimistic comment with real one from server
+      const updatedPost = res.data.post;
+      const normalizedPost = {
+        ...updatedPost,
+        comments: updatedPost.comments.map((comment: Comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            firstName: comment.user?.firstName || "",
+            lastName: comment.user?.lastName || "",
+            email: comment.user?.email || "",
+          },
+          replies: (comment.replies || []).map((reply: Reply) => ({
+            ...reply,
+            user: {
+              ...reply.user,
+              firstName: reply.user?.firstName || "",
+              lastName: reply.user?.lastName || "",
+              email: reply.user?.email || "",
+            },
+          })),
+        })),
       };
 
       setPosts((prev) =>
-        prev.map((p) => (p._id === postId ? { ...p, comments: [...p.comments, mergedComment] } : p))
+        prev.map((p) => (p._id === postId ? normalizedPost : p))
       );
 
       toast.success("Comment added!");
     } catch {
+      // Remove optimistic comment on error
+      setPosts((prev) =>
+        prev.map((p) => 
+          p._id === postId 
+            ? { ...p, comments: p.comments.filter(c => c._id !== optimisticComment._id) }
+            : p
+        )
+      );
       toast.error("Failed to add comment.");
+    }
+  };
+
+  const handleReplySubmit = async (postId: string, commentId: string, content: string) => {
+    if (!content.trim() || !user) return;
+
+    // Optimistic update - add reply immediately
+    const optimisticReply: Reply = {
+      _id: `temp-reply-${Date.now()}`,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts((prev) =>
+      prev.map((p) => 
+        p._id === postId 
+          ? {
+              ...p,
+              comments: p.comments.map((c) =>
+                c._id === commentId
+                  ? { ...c, replies: [...(c.replies || []), optimisticReply] }
+                  : c
+              ),
+            }
+          : p
+      )
+    );
+
+    try {
+      const res = await axiosInstance.post(`/posts/${postId}/comments/${commentId}/replies`, { content });
+
+      // Replace optimistic reply with real one from server
+      const updatedPost = res.data.post;
+      const normalizedPost = {
+        ...updatedPost,
+        comments: updatedPost.comments.map((comment: Comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            firstName: comment.user?.firstName || "",
+            lastName: comment.user?.lastName || "",
+            email: comment.user?.email || "",
+          },
+          replies: (comment.replies || []).map((reply: Reply) => ({
+            ...reply,
+            user: {
+              ...reply.user,
+              firstName: reply.user?.firstName || "",
+              lastName: reply.user?.lastName || "",
+              email: reply.user?.email || "",
+            },
+          })),
+        })),
+      };
+
+      setPosts((prev) =>
+        prev.map((p) => (p._id === postId ? normalizedPost : p))
+      );
+
+      toast.success("Reply added!");
+    } catch {
+      // Remove optimistic reply on error
+      setPosts((prev) =>
+        prev.map((p) => 
+          p._id === postId 
+            ? {
+                ...p,
+                comments: p.comments.map((c) =>
+                  c._id === commentId
+                    ? { ...c, replies: (c.replies || []).filter(r => r._id !== optimisticReply._id) }
+                    : c
+                ),
+              }
+            : p
+        )
+      );
+      toast.error("Failed to add reply.");
     }
   };
 
@@ -178,6 +311,7 @@ const Timeline: React.FC = () => {
               currentUser={user}
               onLike={toggleLike}
               onComment={handleCommentSubmit}
+              onReply={handleReplySubmit}
               onDelete={handleDelete}
             />
           ))}
