@@ -50,6 +50,33 @@ export const createJobPost = async (req: Request, res: Response) => {
  * @route GET /api/job-posts
  * @access Public
  */
+/**
+ * @desc Get job recommendations for a user
+ * @route GET /api/job-posts/recommendations
+ * @access Private
+ */
+export const getJobRecommendations = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    // Get active jobs, sorted by creation date (most recent first)
+    // In a real implementation, you'd match based on user skills, experience, etc.
+    const jobs = await JobPost.find({ isActive: true })
+      .populate("recruiter", "firstName lastName email")
+      .populate("jobType", "name")
+      .populate("workMode", "name")
+      .populate("experienceLevel", "name")
+      .populate("requiredSkills", "name")
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    res.status(200).json({ results: jobs });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export const findJobs = async (req: Request, res: Response) => {
   try {
     const {

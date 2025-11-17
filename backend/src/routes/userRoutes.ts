@@ -5,6 +5,7 @@ import {
   getCandidates,
   getMe,
   getUser,
+  getUserStats,
   getUsers,
   getUsersByRole,
   removeProfileImage,
@@ -19,6 +20,7 @@ const router = Router();
 router.use(authenticated);
 
 router.get("/me", getMe);
+router.get("/me/stats", getUserStats);
 router.put("/me", updateMe);
 
 router.post("/me/profile-image", upload.single("profileImage"), addProfileImage);
