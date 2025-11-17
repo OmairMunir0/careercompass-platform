@@ -35,14 +35,14 @@ export const createPost = async (req: Request, res: Response) => {
 export const getAllPosts = async (_req: Request, res: Response) => {
   try {
     const posts = await Post.find()
-      .populate("user", "firstName lastName email")
+      .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .populate({
         path: "comments.replies.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .sort({ createdAt: -1 });
 
@@ -62,14 +62,14 @@ export const getMyPosts = async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
     const posts = await Post.find({ user: req.user.id })
-      .populate("user", "firstName lastName email")
+      .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .populate({
         path: "comments.replies.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .sort({ createdAt: -1 });
 
@@ -87,14 +87,14 @@ export const getMyPosts = async (req: Request, res: Response) => {
 export const getPostById = async (req: Request, res: Response) => {
   try {
     const post = await Post.findById(req.params.postId)
-      .populate("user", "firstName lastName email")
+      .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .populate({
         path: "comments.replies.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       });
 
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -203,7 +203,7 @@ export const addComment = async (req: Request, res: Response) => {
     await post.save();
 
     const updated = await Post.findById(req.params.postId)
-      .populate("comments.user", "firstName lastName email")
+      .populate("comments.user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.replies.user",
         select: "firstName lastName email",
@@ -268,7 +268,7 @@ export const addReply = async (req: Request, res: Response) => {
     await post.save();
 
     const updated = await Post.findById(req.params.postId)
-      .populate("comments.user", "firstName lastName email")
+      .populate("comments.user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.replies.user",
         select: "firstName lastName email",
@@ -296,11 +296,11 @@ export const getTrendingPosts = async (_req: Request, res: Response) => {
       .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .populate({
         path: "comments.replies.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .sort({ likes: -1, "comments.length": -1 })
       .limit(5);
@@ -316,14 +316,14 @@ export const getRecentPosts = async (_req: Request, res: Response) => {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .limit(10)
-      .populate("user", "firstName lastName email")
+      .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       })
       .populate({
         path: "comments.replies.user",
-        select: "firstName lastName email",
+        select: "firstName lastName email imageUrl",
       });
 
     res.status(200).json(posts);

@@ -11,6 +11,7 @@ interface User {
   lastName: string;
   email: string;
   profileImage?: string;
+  imageUrl?: string;
 }
 
 interface Reply {
@@ -132,9 +133,12 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           onClick={handleProfileClick}
           className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100 hover:ring-purple-300 transition-all cursor-pointer"
         >
-          {user.profileImage ? (
+          {(user.profileImage || user.imageUrl) ? (
             <Image 
-              src={user.profileImage.startsWith('http') ? user.profileImage : `http://localhost:3001${user.profileImage}`}
+              src={(() => {
+                const imgUrl = user.profileImage || user.imageUrl || '';
+                return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+              })()}
               alt={`${user.firstName} ${user.lastName}`} 
               width={48} 
               height={48} 

@@ -16,6 +16,7 @@ interface User {
   lastName: string;
   email: string;
   profileImage?: string;
+  imageUrl?: string;
 }
 
 interface Reply {
@@ -60,7 +61,29 @@ const Timeline: React.FC = () => {
     setLoading(true);
     try {
       const res = await axiosInstance.get("/posts");
-      setPosts(res.data);
+      // Map imageUrl to profileImage for compatibility
+      const postsWithProfileImages = res.data.map((post: Post) => ({
+        ...post,
+        user: {
+          ...post.user,
+          profileImage: (post.user as any).imageUrl || post.user.profileImage,
+        },
+        comments: post.comments.map((comment: Comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            profileImage: (comment.user as any).imageUrl || comment.user.profileImage,
+          },
+          replies: (comment.replies || []).map((reply: Reply) => ({
+            ...reply,
+            user: {
+              ...reply.user,
+              profileImage: (reply.user as any).imageUrl || reply.user.profileImage,
+            },
+          })),
+        })),
+      }));
+      setPosts(postsWithProfileImages);
     } catch {
       toast.error("Failed to load posts.");
     } finally {
@@ -125,7 +148,7 @@ const Timeline: React.FC = () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        profileImage: user.profileImage,
+        profileImage: (user as any).imageUrl || user.profileImage,
       },
       content: content.trim(),
       createdAt: new Date().toISOString(),
@@ -196,7 +219,7 @@ const Timeline: React.FC = () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        profileImage: user.profileImage,
+        profileImage: (user as any).imageUrl || user.profileImage,
       },
       content: content.trim(),
       createdAt: new Date().toISOString(),
