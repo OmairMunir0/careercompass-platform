@@ -246,10 +246,16 @@ const BlogsPage: React.FC = () => {
 
                   {/* Author and Date */}
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                    <button
+                      onClick={() => router.push(`/profile/${blog.author._id}`)}
+                      className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-purple-300 transition-all cursor-pointer"
+                    >
                       {blog.author?.imageUrl || blog.authorAvatar ? (
                         <Image
-                          src={(blog.author?.imageUrl || blog.authorAvatar) as string}
+                          src={(() => {
+                            const imgUrl = (blog.author?.imageUrl || blog.authorAvatar) as string;
+                            return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+                          })()}
                           alt={blog.authorName}
                           width={32}
                           height={32}
@@ -260,14 +266,17 @@ const BlogsPage: React.FC = () => {
                           {blog.authorName?.[0] || 'U'}
                         </div>
                       )}
-                    </div>
-                    <div className="flex-grow min-w-0">
+                    </button>
+                    <button
+                      onClick={() => router.push(`/profile/${blog.author._id}`)}
+                      className="flex-grow min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer"
+                    >
                       <div className="text-sm font-medium text-gray-900 truncate">{blog.authorName}</div>
                       <div className="text-xs text-gray-500 flex items-center gap-1">
                         <Calendar size={12} />
                         {formatDistanceToNow(new Date(blog.createdAt), { addSuffix: true })}
                       </div>
-                    </div>
+                    </button>
                   </div>
 
                   {/* Engagement Stats */}

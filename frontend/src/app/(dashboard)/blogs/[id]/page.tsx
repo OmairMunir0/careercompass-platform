@@ -213,10 +213,16 @@ const BlogDetailPage: React.FC = () => {
 
         {/* Author and Date */}
         <div className="flex items-center gap-4 mb-4">
-          <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+          <button
+            onClick={() => router.push(`/profile/${blog.author._id}`)}
+            className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 hover:ring-4 hover:ring-purple-200 transition-all cursor-pointer"
+          >
             {blog.author?.imageUrl || blog.authorAvatar ? (
               <Image
-                src={(blog.author?.imageUrl || blog.authorAvatar) as string}
+                src={(() => {
+                  const imgUrl = (blog.author?.imageUrl || blog.authorAvatar) as string;
+                  return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+                })()}
                 alt={blog.authorName}
                 width={48}
                 height={48}
@@ -227,14 +233,17 @@ const BlogDetailPage: React.FC = () => {
                 {blog.authorName?.[0] || 'U'}
               </div>
             )}
-          </div>
-          <div className="flex-grow">
+          </button>
+          <button
+            onClick={() => router.push(`/profile/${blog.author._id}`)}
+            className="flex-grow text-left hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <div className="font-semibold text-gray-900">{blog.authorName}</div>
             <div className="text-sm text-gray-500 flex items-center gap-2">
               <Calendar size={14} />
               {formatDistanceToNow(new Date(blog.createdAt), { addSuffix: true })}
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Engagement Stats */}
@@ -294,7 +303,10 @@ const BlogDetailPage: React.FC = () => {
               <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                 {(user as any).imageUrl ? (
                   <Image
-                    src={(user as any).imageUrl}
+                    src={(() => {
+                      const imgUrl = (user as any).imageUrl;
+                      return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+                    })()}
                     alt={`${user.firstName} ${user.lastName}`}
                     width={40}
                     height={40}
@@ -338,10 +350,18 @@ const BlogDetailPage: React.FC = () => {
           {blog.comments && blog.comments.length > 0 ? (
             blog.comments.map((comment) => (
               <div key={comment._id} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                <button
+                  onClick={() => {
+                    if (comment.user?._id) router.push(`/profile/${comment.user._id}`);
+                  }}
+                  className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 hover:ring-4 hover:ring-purple-200 transition-all cursor-pointer"
+                >
                   {comment.user?.imageUrl || comment.avatar ? (
                     <Image
-                      src={(comment.user?.imageUrl || comment.avatar) as string}
+                      src={(() => {
+                        const imgUrl = (comment.user?.imageUrl || comment.avatar) as string;
+                        return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+                      })()}
                       alt={comment.name}
                       width={40}
                       height={40}
@@ -352,9 +372,16 @@ const BlogDetailPage: React.FC = () => {
                       {comment.name?.[0] || 'U'}
                     </div>
                   )}
-                </div>
+                </button>
                 <div className="flex-grow">
-                  <div className="font-semibold text-gray-900 mb-1">{comment.name}</div>
+                  <button
+                    onClick={() => {
+                      if (comment.user?._id) router.push(`/profile/${comment.user._id}`);
+                    }}
+                    className="font-semibold text-gray-900 mb-1 hover:text-purple-600 transition-colors cursor-pointer"
+                  >
+                    {comment.name}
+                  </button>
                   <p className="text-gray-700 mb-2">{comment.text}</p>
                   <div className="text-xs text-gray-500">
                     {formatDistanceToNow(new Date(comment.date), { addSuffix: true })}
