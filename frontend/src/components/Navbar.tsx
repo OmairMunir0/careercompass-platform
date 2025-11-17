@@ -3,6 +3,7 @@
 import { useAuthStore } from "@/store/authStore";
 import {
   Briefcase,
+  BookOpen,
   Heart,
   LucideHome,
   LayoutDashboard,
@@ -44,6 +45,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] =
     return [
       { href: "/timeline", label: "Home", icon: LucideHome },
       { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
+      { href: "/blogs", label: "Blogs", icon: BookOpen },
       { href: "/interviews", label: "Practice Interview", icon: Briefcase },
       { href: "/chats", label: "Chats", icon: MessageSquare },
       { href: "/find-jobs", label: "Find Jobs", icon: Search },
@@ -54,6 +56,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] =
   else if (role === "admin") {
     return [
       { href: "/admin/dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
+      { href: "/blogs", label: "Blogs", icon: BookOpen },
       { href: "/admin/users", label: "Manage Users", icon: User },
       { href: "/admin/job-posts", label: "Manage Job Posts", icon: Briefcase },
       { href: "/admin/interviews", label: "Manage Interviews", icon: Briefcase },
@@ -64,6 +67,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] =
     return [
       { href: "/timeline", label: "Home", icon: LucideHome },
       { href: dashboardHref, label: "Dashboard", icon: LayoutDashboard },
+      { href: "/blogs", label: "Blogs", icon: BookOpen },
       { href: "/interviews", label: "Practice Interview", icon: Briefcase },
       { href: "/chats", label: "Chats", icon: MessageSquare },
       { href: "/job-posts", label: "Job Posts", icon: Briefcase },
