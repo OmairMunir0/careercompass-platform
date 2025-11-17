@@ -1,8 +1,16 @@
 import mongoose, { Schema, Types } from "mongoose";
 
+export interface IReply extends Document {
+  user: Types.ObjectId;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IComment extends Document {
   user: Types.ObjectId;
   content: string;
+  replies: IReply[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,10 +25,19 @@ export interface IPost extends Document {
   updatedAt: Date;
 }
 
+const ReplySubSchema = new Schema<IReply>(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
 const CommentSubSchema = new Schema<IComment>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     content: { type: String, required: true },
+    replies: { type: [ReplySubSchema], default: [] },
   },
   { timestamps: true }
 );

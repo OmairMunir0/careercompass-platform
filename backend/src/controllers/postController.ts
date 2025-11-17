@@ -40,6 +40,10 @@ export const getAllPosts = async (_req: Request, res: Response) => {
         path: "comments.user",
         select: "firstName lastName email",
       })
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json(posts);
@@ -63,6 +67,10 @@ export const getMyPosts = async (req: Request, res: Response) => {
         path: "comments.user",
         select: "firstName lastName email",
       })
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json(posts);
@@ -82,6 +90,10 @@ export const getPostById = async (req: Request, res: Response) => {
       .populate("user", "firstName lastName email")
       .populate({
         path: "comments.user",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "comments.replies.user",
         select: "firstName lastName email",
       });
 
@@ -190,7 +202,12 @@ export const addComment = async (req: Request, res: Response) => {
     post.comments.push({ user: req.user.id, content });
     await post.save();
 
-    const updated = await Post.findById(req.params.postId).populate("comments.user", "name email");
+    const updated = await Post.findById(req.params.postId)
+      .populate("comments.user", "firstName lastName email")
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      });
 
     res.status(201).json({ message: "Comment added", post: updated });
   } catch (err: any) {
@@ -231,6 +248,39 @@ export const deleteComment = async (req: Request, res: Response) => {
 };
 
 /**
+ * @desc Add a reply to a comment
+ * @route POST /api/posts/:postId/comments/:commentId/replies
+ * @access Private
+ */
+export const addReply = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    comment.replies.push({ user: req.user.id, content: content.trim() });
+    await post.save();
+
+    const updated = await Post.findById(req.params.postId)
+      .populate("comments.user", "firstName lastName email")
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      });
+
+    res.status(201).json({ message: "Reply added", post: updated });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
  * @desc Get recent posts (for dashboard)
  * @route GET /api/posts/recent
  * @access Private (Admin)
@@ -240,7 +290,15 @@ export const getRecentPosts = async (_req: Request, res: Response) => {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .limit(10)
-      .populate("user", "name email");
+      .populate("user", "firstName lastName email")
+      .populate({
+        path: "comments.user",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "comments.replies.user",
+        select: "firstName lastName email",
+      });
 
     res.status(200).json(posts);
   } catch (err: any) {

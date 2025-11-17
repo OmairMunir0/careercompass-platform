@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Image, FileText, Video, Calendar, X } from "lucide-react";
 import PrimaryButton from "./ui/PrimaryButton";
+import DocumentGenerator from "./DocumentGenerator";
 
 interface User {
   _id: string;
@@ -20,6 +21,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmit, isSubmittin
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +122,10 @@ const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmit, isSubmittin
             <Video size={20} className="text-green-500 mr-1" />
             <span className="text-sm">Video</span>
           </button>
-          <button className="flex items-center text-gray-600 hover:bg-gray-100 p-2 rounded-md">
+          <button 
+            onClick={() => setShowDocumentGenerator(true)}
+            className="flex items-center text-gray-600 hover:bg-gray-100 p-2 rounded-md transition-colors"
+          >
             <FileText size={20} className="text-orange-500 mr-1" />
             <span className="text-sm">Document</span>
           </button>
@@ -137,6 +142,12 @@ const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmit, isSubmittin
           {isSubmitting ? "Posting..." : "Post"}
         </PrimaryButton>
       </div>
+
+      {/* Document Generator Modal */}
+      <DocumentGenerator
+        isOpen={showDocumentGenerator}
+        onClose={() => setShowDocumentGenerator(false)}
+      />
     </div>
   );
 };

@@ -12,6 +12,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Download } from "lucide-react";
+import { generateInterviewCertificate } from "@/lib/pdfGenerator";
+import toast from "react-hot-toast";
 
 const COLORS = ["#34d399", "#60a5fa", "#f87171", "#fbbf24", "#a78bfa"];
 
@@ -49,9 +52,28 @@ const Analysis: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">
           Interview Analysis Report
         </h1>
-        <p className="text-gray-500 text-sm">
-          Analyzed for <b>{user?.firstName + " " + user?.lastName || "Guest"}</b>
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-gray-500 text-sm">
+            Analyzed for <b>{user?.firstName + " " + user?.lastName || "Guest"}</b>
+          </p>
+          {user && (
+            <button
+              onClick={() => {
+                try {
+                  generateInterviewCertificate(user, latestAnalysis);
+                  toast.success("Certificate downloaded successfully!");
+                } catch (error) {
+                  console.error("Error generating certificate:", error);
+                  toast.error("Failed to generate certificate");
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-md hover:shadow-lg"
+            >
+              <Download size={18} />
+              Download Certificate
+            </button>
+          )}
+        </div>
       </div>
 
       {/* --- Video Player --- */}

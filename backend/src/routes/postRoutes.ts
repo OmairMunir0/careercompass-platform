@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   addComment,
+  addReply,
   createPost,
   deleteComment,
   deletePost,
@@ -71,5 +72,10 @@ router.post("/:postId/comments", authenticated, addComment);
 // @desc    Delete a comment from a post
 // @access  Private
 router.delete("/:postId/comments/:commentId", authenticated, deleteComment);
+
+// @route   POST /api/posts/:postId/comments/:commentId/replies
+// @desc    Add a reply to a comment
+// @access  Private
+router.post("/:postId/comments/:commentId/replies", authenticated, addReply);
 
 export default router;
