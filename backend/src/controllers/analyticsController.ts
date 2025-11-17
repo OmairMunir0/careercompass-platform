@@ -4,6 +4,7 @@ import { Post } from "../models/Post";
 import { Blog } from "../models/Blog";
 import { JobPost } from "../models/JobPost";
 import { JobApplication } from "../models/JobApplication";
+import { Role } from "../models/Role";
 import mongoose from "mongoose";
 
 /**
@@ -17,9 +18,15 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
 
     // User Metrics
     const totalUsers = await User.countDocuments();
-    const totalCandidates = await User.countDocuments({ roleId: await getRoleIdByName("candidate") });
-    const totalRecruiters = await User.countDocuments({ roleId: await getRoleIdByName("recruiter") });
-    const totalAdmins = await User.countDocuments({ roleId: await getRoleIdByName("admin") });
+    
+    // Get role IDs
+    const candidateRoleId = await getRoleIdByName("candidate");
+    const recruiterRoleId = await getRoleIdByName("recruiter");
+    const adminRoleId = await getRoleIdByName("admin");
+    
+    const totalCandidates = candidateRoleId ? await User.countDocuments({ roleId: candidateRoleId }) : 0;
+    const totalRecruiters = recruiterRoleId ? await User.countDocuments({ roleId: recruiterRoleId }) : 0;
+    const totalAdmins = adminRoleId ? await User.countDocuments({ roleId: adminRoleId }) : 0;
     
     // New users in last 7, 30 days
     const sevenDaysAgo = new Date();
@@ -52,21 +59,25 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
     const blogsLast30Days = await Blog.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
     
     // Engagement Metrics
+    // Note: Post.likes is a number, not an array, so we sum it directly
     const totalLikes = await Post.aggregate([
-      { $group: { _id: null, total: { $sum: { $size: "$likes" } } } }
+      { $group: { _id: null, total: { $sum: "$likes" } } }
     ]);
     const totalPostLikes = totalLikes[0]?.total || 0;
     
+    // Blog.likes is an array, so we use $size
     const totalBlogLikes = await Blog.aggregate([
       { $group: { _id: null, total: { $sum: { $size: "$likes" } } } }
     ]);
     const blogLikes = totalBlogLikes[0]?.total || 0;
     
+    // Post.comments is an array, so we use $size
     const totalComments = await Post.aggregate([
       { $group: { _id: null, total: { $sum: { $size: "$comments" } } } }
     ]);
     const postComments = totalComments[0]?.total || 0;
     
+    // Blog.comments is an array, so we use $size
     const totalBlogComments = await Blog.aggregate([
       { $group: { _id: null, total: { $sum: { $size: "$comments" } } } }
     ]);
@@ -91,10 +102,14 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
     ]);
 
     // Top Active Users (by posts + blogs)
+    // Get collection names safely
+    const postsCollectionName = Post.collection?.name || "posts";
+    const blogsCollectionName = Blog.collection?.name || "blogs";
+    
     const topActiveUsers = await User.aggregate([
       {
         $lookup: {
-          from: "posts",
+          from: postsCollectionName,
           localField: "_id",
           foreignField: "user",
           as: "posts"
@@ -102,7 +117,7 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
       },
       {
         $lookup: {
-          from: "blogs",
+          from: blogsCollectionName,
           localField: "_id",
           foreignField: "author",
           as: "blogs"
@@ -123,11 +138,12 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
     ]);
 
     // Most Liked Posts
+    // Note: Post.likes is a number, not an array
     const mostLikedPosts = await Post.aggregate([
       {
         $project: {
           content: 1,
-          likesCount: { $size: "$likes" },
+          likesCount: "$likes", // Direct field access since it's a number
           commentsCount: { $size: "$comments" },
           createdAt: 1
         }
@@ -196,7 +212,11 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("Analytics error:", err);
-    res.status(500).json({ message: err.message });
+    console.error("Error stack:", err.stack);
+    res.status(500).json({ 
+      message: err.message || "Failed to fetch analytics",
+      error: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
   }
 };
 
@@ -205,10 +225,10 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
  */
 async function getRoleIdByName(roleName: string): Promise<mongoose.Types.ObjectId | null> {
   try {
-    const { Role } = await import("../models/Role");
     const role = await Role.findOne({ name: new RegExp(`^${roleName}$`, "i") });
     return role?._id || null;
-  } catch {
+  } catch (error) {
+    console.error(`Error finding role ${roleName}:`, error);
     return null;
   }
 }
