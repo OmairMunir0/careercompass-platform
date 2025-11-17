@@ -1,5 +1,4 @@
 'use client';
-
 import { useAuthStore } from "@/store/authStore";
 import { useInterviewStore } from "@/store/interviewStore";
 import { useSearchParams } from "next/navigation";
@@ -24,7 +23,6 @@ const Analysis: React.FC = () => {
   const searchParams = useSearchParams();
   const video = searchParams.get("video");
 
-  // ✅ Pick the last analysis (latest interview)
   const latestAnalysis = analysis.length > 0 ? analysis[analysis.length - 1] : null;
 
   if (!latestAnalysis) {
@@ -38,10 +36,15 @@ const Analysis: React.FC = () => {
     );
   }
 
-  const emotionData = Object.entries(latestAnalysis.emotions).map(
+  // Safely extract result
+  const result = latestAnalysis.result || [];
+  const overallScore = latestAnalysis.overall_score ?? 0;
+
+  // Emotion Data
+  const emotionData = Object.entries(latestAnalysis.emotions || {}).map(
     ([name, value]) => ({
-      name,
-      value,
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value: Number(value),
     })
   );
 
@@ -79,7 +82,7 @@ const Analysis: React.FC = () => {
       {/* --- Video Player --- */}
       <div className="bg-white shadow-md rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-3 text-gray-800">
-          🎥 Replay Your Interview
+          Replay Your Interview
         </h2>
         <video
           width="100%"
@@ -95,15 +98,59 @@ const Analysis: React.FC = () => {
         </video>
       </div>
 
-      {/* --- Score Section --- */}
+      {/* --- Overall Score --- */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl p-6 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Overall Performance Score</h2>
           <p className="text-sm text-indigo-100 mt-1">
-            Based on tone, expression, and emotional balance.
+            Based on answer accuracy and relevance.
           </p>
         </div>
-        <div className="text-5xl font-bold">{latestAnalysis.overall_score}%</div>
+        <div className="text-5xl font-bold">{overallScore}%</div>
+      </div>
+
+      {/* --- Per-Question Scores --- */}
+      <div className="bg-white shadow-md rounded-2xl p-6">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800">
+          Question-by-Question Breakdown
+        </h2>
+        <div className="space-y-4">
+          {result.length > 0 ? (
+            result.map((q: any) => (
+              <div
+                key={q.question_id}
+                className={`p-4 rounded-lg border-l-4 ${
+                  q.percentage >= 80
+                    ? "border-green-500 bg-green-50"
+                    : q.percentage >= 50
+                    ? "border-yellow-500 bg-yellow-50"
+                    : "border-red-500 bg-red-50"
+                }`}
+              >
+                <p className="font-medium text-gray-800">{q.question}</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  <strong>You:</strong> {q.user_answer || "<No answer>"}
+                </p>
+                <p className="text-sm mt-1">
+                  <strong>Score:</strong>{" "}
+                  <span
+                    className={
+                      q.percentage >= 80
+                        ? "text-green-600 font-bold"
+                        : q.percentage >= 50
+                        ? "text-yellow-600 font-bold"
+                        : "text-red-600 font-bold"
+                    }
+                  >
+                    {q.percentage}%
+                  </span>
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500">No questions answered.</p>
+          )}
+        </div>
       </div>
 
       {/* --- Emotions --- */}
@@ -111,50 +158,56 @@ const Analysis: React.FC = () => {
         {/* Emotion Chart */}
         <div className="bg-white shadow-md rounded-2xl p-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-800">
-            🧠 Emotion Distribution
+            Emotion Distribution
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={emotionData}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label={({ name, value }) => `${name} (${value}%)`}
-                dataKey="value"
-              >
-                {emotionData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+          {emotionData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={emotionData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ name, value }) => `${name} (${value}%)`}
+                  dataKey="value"
+                >
+                  {emotionData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-500 text-center">No emotion data available.</p>
+          )}
         </div>
 
         {/* Emotion Breakdown */}
         <div className="bg-white shadow-md rounded-2xl p-6 flex flex-col justify-center">
           <h2 className="text-lg font-semibold mb-4 text-gray-800">
-            💬 Emotion Breakdown
+            Emotion Breakdown
           </h2>
           <div className="space-y-3">
-            {Object.entries(latestAnalysis.emotions).map(([emotion, percent], i) => (
-              <div key={emotion} className="flex justify-between items-center">
-                <span className="capitalize text-gray-700 text-lg font-medium">
-                  {emotion}
-                </span>
-                <span
-                  className="px-3 py-1 rounded-full text-sm font-semibold text-white"
-                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                >
-                  {percent}%
-                </span>
-              </div>
-            ))}
+            {Object.entries(latestAnalysis.emotions || {}).map(
+              ([emotion, percent], i) => (
+                <div key={emotion} className="flex justify-between items-center">
+                  <span className="capitalize text-gray-700 text-lg font-medium">
+                    {emotion}
+                  </span>
+                  <span
+                    className="px-3 py-1 rounded-full text-sm font-semibold text-white"
+                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  >
+                    {percent}%
+                  </span>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -162,22 +215,26 @@ const Analysis: React.FC = () => {
       {/* --- Summary Section --- */}
       <div className="bg-white shadow-md rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-3 text-gray-800">
-          📈 Summary Insights
+          Summary Insights
         </h2>
         <ul className="list-disc pl-5 text-gray-700 space-y-2">
           <li>
-            Your <b>overall confidence level</b> and body language appear strong.
+            Your <b>overall score</b> is <b>{overallScore}%</b> —{" "}
+            {overallScore >= 80
+              ? "Excellent performance!"
+              : overallScore >= 60
+              ? "Good effort, room to improve."
+              : "Needs significant improvement."}
           </li>
           <li>
-            You maintained a <b>balanced emotional tone</b> with mostly happy and
-            neutral expressions.
+            You answered <b>{result.filter((q: any) => q.user_answer).length}</b> out of{" "}
+            <b>{result.length}</b> questions.
           </li>
           <li>
-            Slight moments of hesitation (sad expression 5%) were detected —
-            consider improving transitions between answers.
+            Focus on <b>answering the exact question asked</b> — avoid unrelated topics.
           </li>
           <li>
-            Overall, you performed exceptionally well! 🎯
+            Keep practicing! Consistency builds confidence. Keep Going
           </li>
         </ul>
       </div>

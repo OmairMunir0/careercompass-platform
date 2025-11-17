@@ -19,6 +19,7 @@ from sentence_transformers import SentenceTransformer
 _MODEL: SentenceTransformer | None = None
 _DEFAULT_MODEL = os.getenv("MODEL_NAME", "intfloat/e5-large-v2")
 _DEFAULT_PREFIX = "query: "
+THRESHOLD = 0.75
 
 
 def _load_model(model_name: str | None = None, device: str | None = None) -> SentenceTransformer:
@@ -122,41 +123,54 @@ def _run_self_test(
     print("=" * 90)
     
     
-def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> List[Tuple[str, str]]:
+def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> List[dict]:
+
     if not questions_list:
         return []
 
-    # Extract reference data
-    ref_texts = [q["question"] for q in questions_list]
-    ref_answers = {q["_id"]: q["answer"] for q in questions_list}
+    n_questions = len(questions_list)
+    result = []
 
-    spoken_chunks = [c for c in segmented_chunks if c.strip().lower() != "[silent]"]
-    if not spoken_chunks:
-        return []
-    
-    print(spoken_chunks)
+    # ------------------------------------------------------------------
+    # 1. Process each chunk in order
+    # ------------------------------------------------------------------
+    for i in range(n_questions):
+        # Get user answer (or empty if out of range)
+        user_ans = ""
+        if i < len(segmented_chunks):
+            raw = segmented_chunks[i].strip()
+            if raw.lower() != "[silent]":
+                user_ans = raw
 
-    # Build all (chunk, ref_question) pairs
-    pairs = [(chunk, ref_text) for chunk in segmented_chunks for ref_text in ref_texts]
+        # Get reference
+        q = questions_list[i]
+        ref_ans = q["answer"]
 
-    scores = batch_similarity(pairs)
-    print("Scores:", scores)
+        # ------------------------------------------------------------------
+        # 2. Skip similarity if silent
+        # ------------------------------------------------------------------
+        if not user_ans:
+            similarity = 0.0
+            percentage = 0.0
+        else:
+            # Compute 1-to-1 similarity
+            similarity = batch_similarity([(user_ans, ref_ans)])[0]
+            percentage = round(similarity * 100, 2)
+            similarity = round(similarity, 4)
 
-    n_chunks = len(segmented_chunks)
-    n_refs = len(ref_texts)
-    score_matrix = np.array(scores).reshape(n_chunks, n_refs)
+        # ------------------------------------------------------------------
+        # 3. Add to result
+        # ------------------------------------------------------------------
+        result.append({
+            "question_id": q["_id"],
+            "question": q["question"],
+            "user_answer": user_ans,
+            "reference_answer": ref_ans,
+            "similarity": similarity,
+            "percentage": percentage
+        })
 
-    best_ref_idx = score_matrix.argmax(axis=1)
-
-    result_pairs = []
-    for chunk_idx, ref_idx in enumerate(best_ref_idx):
-        user_answer = segmented_chunks[chunk_idx]
-        qid = questions_list[ref_idx]["_id"]
-        ref_answer = ref_answers[qid]
-        result_pairs.append((user_answer, ref_answer))
-        
-        
-    return result_pairs
+    return result
 
 
 if __name__ == "__main__":

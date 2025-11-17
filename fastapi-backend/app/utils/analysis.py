@@ -9,14 +9,13 @@ import subprocess
 import math
 from typing import List, Tuple, Dict
 import uuid
-import whisper  # Using openai-whisper package
-
+import whisper 
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads/videos")
 BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 ANSWER_TIME = os.getenv("ANSWER_TIME", 40)
+whisper_model = whisper.load_model("base")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Lazy loading for Whisper model (only loads when needed)
@@ -78,7 +77,6 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Audio not found: {audio_path}")
 
-    print(f"[Whisper] Transcribing: {audio_path}")
     model = get_whisper_model()  # Lazy load model only when needed
     result = model.transcribe(
         audio_path,
@@ -91,18 +89,16 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     num_chunks = 10
     chunks = [""] * num_chunks
 
-    # ← FIX: Ensure float division
     segment_duration = float(segment_duration)
 
     for seg in segments:
-        start = float(seg["start"])  # ← Force float
+        start = float(seg["start"]) 
         text = seg["text"].strip()
 
         bucket_idx = min(int(start // segment_duration), num_chunks - 1)
         chunks[bucket_idx] += " " + text
 
     chunks = [c.strip() or "[silent]" for c in chunks]
-    print(f"[Whisper] Split into {len(chunks)} chunks of {segment_duration}s")
     return full_transcript, chunks
 
 
