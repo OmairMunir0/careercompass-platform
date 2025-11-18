@@ -4,6 +4,7 @@ import { Blog, IBlog } from "../models/Blog";
 import { User } from "../models/User";
 import path from "path";
 import fs from "fs";
+import { getCached, setCached, CACHE_TTL, invalidateCache } from "../utils/cache";
 
 /**
  * @desc Get all blogs (paginated)
@@ -16,6 +17,15 @@ export const getAllBlogs = async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
     const tag = req.query.tag as string;
+
+    // Generate cache key based on query params
+    const cacheKey = `blogs:all:page:${page}:limit:${limit}:search:${search || ""}:tag:${tag || ""}`;
+
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     const skip = (page - 1) * limit;
 
@@ -42,7 +52,7 @@ export const getAllBlogs = async (req: Request, res: Response) => {
 
     const total = await Blog.countDocuments(query);
 
-    res.status(200).json({
+    const response = {
       blogs,
       pagination: {
         page,
@@ -50,7 +60,12 @@ export const getAllBlogs = async (req: Request, res: Response) => {
         total,
         pages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // Cache the result
+    await setCached(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    res.status(200).json(response);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -63,6 +78,14 @@ export const getAllBlogs = async (req: Request, res: Response) => {
  */
 export const getBlogById = async (req: Request, res: Response) => {
   try {
+    const cacheKey = `blogs:${req.params.id}`;
+
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const blog = await Blog.findById(req.params.id)
       .populate("author", "firstName lastName email imageUrl")
       .populate("likes", "firstName lastName")
@@ -72,6 +95,9 @@ export const getBlogById = async (req: Request, res: Response) => {
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
+
+    // Cache the result
+    await setCached(cacheKey, blog, CACHE_TTL.MEDIUM);
 
     res.status(200).json(blog);
   } catch (err: any) {
@@ -122,6 +148,9 @@ export const createBlog = async (req: Request, res: Response) => {
 
     await blog.save();
     await blog.populate("author", "firstName lastName email imageUrl");
+
+    // Invalidate blogs cache
+    await invalidateCache(["blogs:*"]);
 
     res.status(201).json(blog);
   } catch (err: any) {
@@ -185,6 +214,9 @@ export const updateBlog = async (req: Request, res: Response) => {
     await blog.save();
     await blog.populate("author", "firstName lastName email imageUrl");
 
+    // Invalidate blogs cache
+    await invalidateCache([`blogs:${req.params.id}`, "blogs:*"]);
+
     res.status(200).json(blog);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -232,6 +264,9 @@ export const deleteBlog = async (req: Request, res: Response) => {
 
     await Blog.findByIdAndDelete(req.params.id);
 
+    // Invalidate blogs cache
+    await invalidateCache([`blogs:${req.params.id}`, "blogs:*"]);
+
     res.status(200).json({ message: "Blog deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -267,6 +302,9 @@ export const toggleLike = async (req: Request, res: Response) => {
 
     await blog.save();
     await blog.populate("likes", "firstName lastName");
+
+    // Invalidate blogs cache
+    await invalidateCache([`blogs:${req.params.id}`, "blogs:*"]);
 
     res.status(200).json({ likes: blog.likes, isLiked: likeIndex === -1 });
   } catch (err: any) {
@@ -310,6 +348,9 @@ export const addComment = async (req: Request, res: Response) => {
 
     await blog.save();
     await blog.populate("comments.user", "firstName lastName email imageUrl");
+
+    // Invalidate blogs cache
+    await invalidateCache([`blogs:${req.params.id}`, "blogs:*"]);
 
     res.status(201).json(blog);
   } catch (err: any) {
@@ -356,6 +397,9 @@ export const deleteComment = async (req: Request, res: Response) => {
 
     blog.comments.pull(req.params.commentId);
     await blog.save();
+
+    // Invalidate blogs cache
+    await invalidateCache([`blogs:${req.params.id}`, "blogs:*"]);
 
     res.status(200).json({ message: "Comment deleted successfully", blog });
   } catch (err: any) {

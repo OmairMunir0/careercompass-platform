@@ -1,6 +1,7 @@
 import "dotenv/config";
 import app from "./app";
 import { connectDB, disconnectDB } from "./config/db";
+import { disconnectRedis } from "./config/redis";
 import { ensureUploadDirs } from "./config/dirs";
 
 const PORT = Number(process.env.PORT);
@@ -17,6 +18,7 @@ const PORT = Number(process.env.PORT);
     console.log("Shutdown signal received");
     server.close(async () => {
       await disconnectDB();
+      await disconnectRedis();
       console.log("Server closed");
       process.exit(0);
     });

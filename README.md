@@ -7,6 +7,7 @@
 - Frontend: Next.js (React + TypeScript)
 - Backend: Express.js (TypeScript)
 - Database: MongoDB (Mongoose ODM)
+- Cache: Redis (for database query caching)
 
 ## Project Structure
 
@@ -28,6 +29,7 @@ root/
 - Node.js (LTS)
 - npm
 - MongoDB instance running via Atlas
+- Redis server (for caching)
 - Backend Setup (Express)
 
 ### Frontend Setup (Next.js)
@@ -76,15 +78,40 @@ JWT_SECRET=your_secret_key
 STRIPE_SECRET_KEY=your_secret_stripe_key
 STRIPE_PREMIUM_PRICE_ID=price_123
 FRONTEND_URL=http://localhost:3000
+
+# Redis Configuration (Optional - defaults provided)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 ```
 
-3. Seed in default entries in DB (Optional)
+3. Install and start Redis (if not already running)
+
+**Windows:**
+- Download Redis from https://github.com/microsoftarchive/redis/releases
+- Or use WSL: `sudo apt-get install redis-server`
+- Start Redis: `redis-server`
+
+**macOS:**
+```bash
+brew install redis
+brew services start redis
+```
+
+**Linux:**
+```bash
+sudo apt-get install redis-server
+sudo systemctl start redis-server
+```
+
+4. Seed in default entries in DB (Optional)
 
 ```
 npm run seed
 ```
 
-4. Run the API server
+5. Run the API server
 
 ```
 npm run dev
@@ -148,6 +175,11 @@ FastAPI server should now be available at:
 - Use TypeScript in both layers.
 - MongoDB models live under backend/src/models.
 - Seed data is added for all the models and live under backend/src/data
+- **Redis Caching**: The backend uses Redis for caching frequently accessed data:
+  - Posts, Blogs, Users, and Analytics are cached
+  - Cache TTL: Short (1 min) for dynamic content, Medium (5 min) for user data, Long (30 min) for analytics
+  - Cache is automatically invalidated on create/update/delete operations
+  - If Redis is unavailable, the app will continue to work but without caching benefits
 - Frontend → Express → FastAPI workflow:
 ```
     Frontend (React) 

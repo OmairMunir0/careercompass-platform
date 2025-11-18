@@ -5,6 +5,7 @@ import { UserExperience } from "../models";
 import { Role } from "../models/Role";
 import { IUser, User } from "../models/User";
 import { isSubscriptionActive, syncSubscriptionStatus } from "../utils/subscription";
+import { getCached, setCached, CACHE_TTL, invalidateCache } from "../utils/cache";
 
 // Response DTO
 export type UserResponseDto = Partial<IUser>;
@@ -62,6 +63,9 @@ export const updateMe = async (req: Request, res: Response) => {
 
     const { passwordHash: _, ...safeUser } = user.toObject();
 
+    // Invalidate user cache
+    await invalidateCache([`users:${req.user.id}`, "users:*"]);
+
     res.status(200).json({
       message: "Profile updated",
       data: { ...safeUser, isPremiumActive: isSubscriptionActive(user) },
@@ -80,6 +84,15 @@ export const updateMe = async (req: Request, res: Response) => {
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const { role, search, page = "1", limit = "10" } = req.query;
+
+    // Generate cache key
+    const cacheKey = `users:all:role:${role || ""}:search:${search || ""}:page:${page}:limit:${limit}`;
+
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     const query: any = {};
 
@@ -115,11 +128,16 @@ export const getUsers = async (req: Request, res: Response) => {
 
     const total = await User.countDocuments(query);
 
-    res.status(200).json({
+    const response = {
       message: "Users fetched",
       data: safeUsers,
       meta: { total, page: pageNum, limit: limitNum },
-    });
+    };
+
+    // Cache the result
+    await setCached(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    res.status(200).json(response);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -132,12 +150,25 @@ export const getUsers = async (req: Request, res: Response) => {
  */
 export const getUser = async (req: Request, res: Response) => {
   try {
+    const cacheKey = `users:${req.params.userId}`;
+
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const user = await User.findById(req.params.userId).populate("roleId", "name");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const { passwordHash, ...safeUser } = user.toObject();
 
-    res.status(200).json({ message: "User fetched", data: safeUser });
+    const response = { message: "User fetched", data: safeUser };
+
+    // Cache the result
+    await setCached(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    res.status(200).json(response);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -152,6 +183,15 @@ export const getUser = async (req: Request, res: Response) => {
 export const getCandidates = async (req: Request, res: Response) => {
   try {
     const { search, page = "1", limit = "10" } = req.query;
+
+    // Generate cache key
+    const cacheKey = `users:candidates:search:${search || ""}:page:${page}:limit:${limit}`;
+
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     // Get candidate role
     const roleDoc = await Role.findOne({ name: "candidate" });
@@ -187,11 +227,16 @@ export const getCandidates = async (req: Request, res: Response) => {
 
     const total = await User.countDocuments(query);
 
-    res.status(200).json({
+    const response = {
       message: "Candidates fetched",
       data: safeCandidates,
       meta: { total, page: pageNum, limit: limitNum },
-    });
+    };
+
+    // Cache the result
+    await setCached(cacheKey, response, CACHE_TTL.MEDIUM);
+
+    res.status(200).json(response);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -276,6 +321,9 @@ export const addProfileImage = async (req: Request, res: Response) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Invalidate user cache
+    await invalidateCache([`users:${req.user.id}`, "users:*"]);
+
     res.status(200).json({ message: "Profile image uploaded", data: { imageUrl: user.imageUrl } });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -301,6 +349,9 @@ export const removeProfileImage = async (req: Request, res: Response) => {
 
     user.imageUrl = null;
     await user.save();
+
+    // Invalidate user cache
+    await invalidateCache([`users:${req.user.id}`, "users:*"]);
 
     res.status(200).json({ message: "Profile image removed", data: { imageUrl: null } });
   } catch (err: any) {
@@ -332,6 +383,9 @@ export const addResume = async (req: Request, res: Response) => {
     user.resumeUrl = resumeUrl;
     await user.save();
 
+    // Invalidate user cache
+    await invalidateCache([`users:${req.user.id}`, "users:*"]);
+
     res.status(200).json({ message: "Resume uploaded", data: { resumeUrl: user.resumeUrl } });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -357,6 +411,9 @@ export const removeResume = async (req: Request, res: Response) => {
 
     user.resumeUrl = null;
     await user.save();
+
+    // Invalidate user cache
+    await invalidateCache([`users:${req.user.id}`, "users:*"]);
 
     res.status(200).json({ message: "Resume removed", data: { resumeUrl: null } });
   } catch (err: any) {

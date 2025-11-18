@@ -9,6 +9,7 @@ import SkillManager from "@/components/SkillManager";
 import ResumeManager from "@/components/ResumeManager";
 import { useAuthStore } from "@/store/authStore";
 import { userService } from "@/services/userService";
+import { billingService } from "@/services/billingService";
 import { Award, Briefcase, FileText, GraduationCap, User, Camera, X, FileCheck } from "lucide-react";
 import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
@@ -21,6 +22,7 @@ const Profile: React.FC = () => {
   >("personal");
   const [isHoveringProfile, setIsHoveringProfile] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -93,6 +95,37 @@ const Profile: React.FC = () => {
   if (!user) return <Loader />;
 
   const userImageUrl = (user as any).imageUrl;
+  const isPremiumPlan = Boolean((user as any)?.isPremiumActive);
+
+  const handleUpgrade = async () => {
+    if (!user) {
+      toast.error("Please sign in to upgrade.");
+      return;
+    }
+
+    try {
+      setIsUpgrading(true);
+      const baseUrl =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const successUrl = `${baseUrl}/billing/success`;
+      const cancelUrl = `${baseUrl}/billing/cancel`;
+
+      const response = await billingService.createCheckoutSession({ successUrl, cancelUrl });
+      if (response?.url) {
+        window.location.href = response.url;
+      } else {
+        toast.error("Unable to start checkout session.");
+      }
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Unable to start checkout.";
+      toast.error(message);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -164,6 +197,32 @@ const Profile: React.FC = () => {
                 </h1>
                 <p className="text-gray-600">{user.email}</p>
                 <p className="text-sm text-gray-500">Role: {user.role || "—"}</p>
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0">
+                  <span
+                    className={`inline-flex items-center justify-center px-4 py-2 rounded-full text-xs font-semibold min-w-[140px] text-center ${
+                      isPremiumPlan
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-gray-100 text-gray-700 border border-gray-200"
+                    }`}
+                  >
+                    {isPremiumPlan ? "Premium Plan" : "Free Plan"}
+                  </span>
+                  {!isPremiumPlan && (
+                    <button
+                      onClick={handleUpgrade}
+                      disabled={isUpgrading}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-semibold hover:from-purple-700 hover:to-purple-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px]"
+                    >
+                      {isUpgrading ? "Redirecting..." : "Upgrade for $3.99/mo"}
+                    </button>
+                  )}
+                </div>
+                {!isPremiumPlan && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Premium members get 10× the posting space (2,500 characters) plus priority visibility across the
+                    community.
+                  </p>
+                )}
               </div>
             </div>
           </div>

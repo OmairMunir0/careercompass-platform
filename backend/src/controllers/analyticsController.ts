@@ -6,6 +6,7 @@ import { JobPost } from "../models/JobPost";
 import { JobApplication } from "../models/JobApplication";
 import { Role } from "../models/Role";
 import mongoose from "mongoose";
+import { getCached, setCached, CACHE_TTL } from "../utils/cache";
 
 /**
  * @desc Get comprehensive analytics dashboard data
@@ -15,6 +16,14 @@ import mongoose from "mongoose";
 export const getDashboardAnalytics = async (req: Request, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const cacheKey = "analytics:dashboard";
+
+    // Try to get from cache (analytics are expensive to compute)
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     // User Metrics
     const totalUsers = await User.countDocuments();
@@ -166,7 +175,7 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
       { $limit: 5 }
     ]);
 
-    res.status(200).json({
+    const response = {
       data: {
         users: {
           total: totalUsers,
@@ -209,7 +218,12 @@ export const getDashboardAnalytics = async (req: Request, res: Response) => {
         topPosts: mostLikedPosts,
         topBlogs: mostLikedBlogs,
       },
-    });
+    };
+
+    // Cache the result (analytics are expensive, cache for longer)
+    await setCached(cacheKey, response, CACHE_TTL.LONG);
+
+    res.status(200).json(response);
   } catch (err: any) {
     console.error("Analytics error:", err);
     console.error("Error stack:", err.stack);

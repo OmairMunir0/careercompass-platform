@@ -7,6 +7,7 @@ import {
   PREMIUM_CHARACTER_LIMIT,
   syncSubscriptionStatus,
 } from "../utils/subscription";
+import { getCached, setCached, CACHE_TTL, invalidateCache } from "../utils/cache";
 
 /**
  * @desc Create a new post
@@ -45,6 +46,9 @@ export const createPost = async (req: Request, res: Response) => {
       imageUrl,
     });
 
+    // Invalidate posts cache
+    await invalidateCache(["posts:*"]);
+
     res.status(201).json(post);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -58,6 +62,14 @@ export const createPost = async (req: Request, res: Response) => {
  */
 export const getAllPosts = async (_req: Request, res: Response) => {
   try {
+    const cacheKey = "posts:all";
+    
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const posts = await Post.find()
       .populate("user", "firstName lastName email imageUrl")
       .populate({
@@ -69,6 +81,9 @@ export const getAllPosts = async (_req: Request, res: Response) => {
         select: "firstName lastName email imageUrl",
       })
       .sort({ createdAt: -1 });
+
+    // Cache the result
+    await setCached(cacheKey, posts, CACHE_TTL.SHORT);
 
     res.status(200).json(posts);
   } catch (err: any) {
@@ -110,6 +125,14 @@ export const getMyPosts = async (req: Request, res: Response) => {
  */
 export const getPostById = async (req: Request, res: Response) => {
   try {
+    const cacheKey = `posts:${req.params.postId}`;
+    
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const post = await Post.findById(req.params.postId)
       .populate("user", "firstName lastName email imageUrl")
       .populate({
@@ -122,6 +145,9 @@ export const getPostById = async (req: Request, res: Response) => {
       });
 
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Cache the result
+    await setCached(cacheKey, post, CACHE_TTL.MEDIUM);
 
     res.status(200).json(post);
   } catch (err: any) {
@@ -158,6 +184,10 @@ export const updatePost = async (req: Request, res: Response) => {
     );
 
     if (!post) return res.status(404).json({ message: "Post not found or unauthorized" });
+    
+    // Invalidate posts cache
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
+    
     res.status(200).json(post);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -179,6 +209,10 @@ export const deletePost = async (req: Request, res: Response) => {
     });
 
     if (!deleted) return res.status(404).json({ message: "Post not found or unauthorized" });
+    
+    // Invalidate posts cache
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
+    
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -197,6 +231,10 @@ export const likePost = async (req: Request, res: Response) => {
 
     post.likes += 1;
     await post.save();
+    
+    // Invalidate cache for this post
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
+    
     res.status(200).json({ message: "Post liked", likes: post.likes });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -215,6 +253,10 @@ export const unlikePost = async (req: Request, res: Response) => {
 
     post.likes = Math.max(0, post.likes - 1);
     await post.save();
+    
+    // Invalidate cache for this post
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
+    
     res.status(200).json({ message: "Post unliked", likes: post.likes });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -244,6 +286,9 @@ export const addComment = async (req: Request, res: Response) => {
         path: "comments.replies.user",
         select: "firstName lastName email",
       });
+
+    // Invalidate cache for this post
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
 
     res.status(201).json({ message: "Comment added", post: updated });
   } catch (err: any) {
@@ -276,6 +321,9 @@ export const deleteComment = async (req: Request, res: Response) => {
 
     comment.deleteOne();
     await post.save();
+
+    // Invalidate cache for this post
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
 
     res.status(200).json({ message: "Comment deleted" });
   } catch (err: any) {
@@ -310,6 +358,9 @@ export const addReply = async (req: Request, res: Response) => {
         select: "firstName lastName email",
       });
 
+    // Invalidate cache for this post
+    await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
+
     res.status(201).json({ message: "Reply added", post: updated });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -328,6 +379,14 @@ export const addReply = async (req: Request, res: Response) => {
  */
 export const getTrendingPosts = async (_req: Request, res: Response) => {
   try {
+    const cacheKey = "posts:trending";
+    
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const posts = await Post.find()
       .populate("user", "firstName lastName email imageUrl")
       .populate({
@@ -341,6 +400,9 @@ export const getTrendingPosts = async (_req: Request, res: Response) => {
       .sort({ likes: -1, "comments.length": -1 })
       .limit(5);
 
+    // Cache the result
+    await setCached(cacheKey, posts, CACHE_TTL.SHORT);
+
     res.status(200).json(posts);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -349,6 +411,14 @@ export const getTrendingPosts = async (_req: Request, res: Response) => {
 
 export const getRecentPosts = async (_req: Request, res: Response) => {
   try {
+    const cacheKey = "posts:recent";
+    
+    // Try to get from cache
+    const cached = await getCached(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .limit(10)
@@ -361,6 +431,9 @@ export const getRecentPosts = async (_req: Request, res: Response) => {
         path: "comments.replies.user",
         select: "firstName lastName email imageUrl",
       });
+
+    // Cache the result
+    await setCached(cacheKey, posts, CACHE_TTL.SHORT);
 
     res.status(200).json(posts);
   } catch (err: any) {
