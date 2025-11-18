@@ -47,7 +47,7 @@ const UserProfileCard: React.FC = () => {
               alt={`${user.firstName} ${user.lastName}`}
               width={80}
               height={80}
-              className="object-cover"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 text-white text-2xl font-semibold">
