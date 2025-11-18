@@ -43,7 +43,7 @@ const UserProfileCard: React.FC = () => {
         <div className="h-20 w-20 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-4 ring-purple-100 mb-3">
           {(user as any).imageUrl ? (
             <Image
-              src={(user as any).imageUrl}
+              src={(user as any).imageUrl.startsWith('http') ? (user as any).imageUrl : `http://localhost:3001${(user as any).imageUrl}`}
               alt={`${user.firstName} ${user.lastName}`}
               width={80}
               height={80}

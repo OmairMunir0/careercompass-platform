@@ -94,7 +94,9 @@ const Timeline: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
+  console.log(posts);
+  
   const handleUpgrade = async () => {
     if (!user) {
       toast.error("Please sign in to upgrade.");
@@ -386,7 +388,7 @@ const Timeline: React.FC = () => {
                   comments={post.comments}
                   createdAt={post.createdAt}
                   isLiked={!!likedPosts[post._id]}
-                  currentUser={user}
+                  currentUser={user as any}
                   onLike={toggleLike}
                   onComment={handleCommentSubmit}
                   onReply={handleReplySubmit}

@@ -105,7 +105,7 @@ const RightSidebar: React.FC = () => {
                   <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                     {post.user.imageUrl ? (
                       <Image
-                        src={post.user.imageUrl}
+                        src={(post.user as any).imageUrl.startsWith('http') ? (post.user as any).imageUrl : `http://localhost:3001${(post.user as any).imageUrl}`}
                         alt={`${post.user.firstName} ${post.user.lastName}`}
                         width={32}
                         height={32}
