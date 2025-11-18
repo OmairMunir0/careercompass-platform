@@ -105,6 +105,25 @@ sudo apt-get install redis-server
 sudo systemctl start redis-server
 ```
 
+3.1. Generate VAPID keys for Web Push Notifications (Optional)
+
+To enable browser push notifications, you need to generate VAPID keys:
+
+```bash
+cd backend
+npx web-push generate-vapid-keys
+```
+
+This will output a public key and private key. Add them to your `.env` file:
+
+```
+VAPID_PUBLIC_KEY=your_public_key_here
+VAPID_PRIVATE_KEY=your_private_key_here
+VAPID_SUBJECT=mailto:admin@careercompass.com
+```
+
+**Note:** Push notifications are only available for Premium users. The notification center (bell icon) will only appear for Premium subscribers.
+
 4. Seed in default entries in DB (Optional)
 
 ```
@@ -180,6 +199,12 @@ FastAPI server should now be available at:
   - Cache TTL: Short (1 min) for dynamic content, Medium (5 min) for user data, Long (30 min) for analytics
   - Cache is automatically invalidated on create/update/delete operations
   - If Redis is unavailable, the app will continue to work but without caching benefits
+- **Notification Center (Premium Feature)**: 
+  - Exclusive to Premium users - a bell icon appears in the bottom left corner of the timeline
+  - Notifications are sent for: post likes, post comments, chat messages, and job posts matching user skills
+  - Read notifications have white background, unread have blue highlight
+  - Browser push notifications work even when the tab is closed (requires VAPID keys configuration)
+  - Service worker (`/public/sw.js`) handles push notifications and click events
 - Frontend → Express → FastAPI workflow:
 ```
     Frontend (React) 

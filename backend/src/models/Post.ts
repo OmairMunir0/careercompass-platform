@@ -19,7 +19,7 @@ export interface IPost extends Document {
   user: Types.ObjectId;
   content: string;
   imageUrl: string | null;
-  likes: number;
+  likes: Types.ObjectId[]; // Array of user IDs who liked the post
   comments: IComment[];
   createdAt: Date;
   updatedAt: Date;
@@ -47,10 +47,17 @@ const PostSchema = new Schema<IPost>(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     content: { type: String, required: true },
     imageUrl: { type: String, default: null },
-    likes: { type: Number, default: 0 },
+    likes: {
+      type: [Schema.Types.ObjectId],
+      ref: "User",
+      default: [],
+    },
     comments: { type: [CommentSubSchema], default: [] },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    strict: false, // Allow fields that don't match schema (for backward compatibility)
+  }
 );
 
 export const Post = mongoose.models.Post || mongoose.model<IPost>("Post", PostSchema);

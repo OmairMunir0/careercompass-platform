@@ -25,6 +25,7 @@ export interface IUser extends Document {
   stripeSubscriptionId: string | null;
   stripeCheckoutSessionId: string | null;
   lastPaymentAt: Date | null;
+  pushSubscription: string | null; // JSON stringified push subscription
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,6 +60,7 @@ export const UserSchema = new Schema<IUser>(
     stripeSubscriptionId: { type: String, default: null },
     stripeCheckoutSessionId: { type: String, default: null },
     lastPaymentAt: { type: Date, default: null },
+    pushSubscription: { type: String, default: null },
   },
   { timestamps: true }
 );

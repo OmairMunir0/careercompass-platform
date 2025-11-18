@@ -29,10 +29,22 @@ export const morganMiddleware = morgan("dev");
 export const jsonMiddleware = express.json({ limit: "10mb" });
 export const urlencodedMiddleware = express.urlencoded({ extended: true, limit: "10mb" });
 
-// Rate limiting
+// Rate limiting - more lenient for notification routes
 export const rateLimitMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for notification routes (they poll frequently)
+    return req.path.startsWith("/api/notifications");
+  },
+});
+
+// Separate rate limit for notification routes (more lenient)
+export const notificationRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200, // Higher limit for notifications
   standardHeaders: true,
   legacyHeaders: false,
 });
