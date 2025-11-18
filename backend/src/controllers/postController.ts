@@ -1,5 +1,12 @@
 import { Request, Response } from "express";
 import { Post } from "../models/Post";
+import { User } from "../models/User";
+import {
+  FREE_CHARACTER_LIMIT,
+  getCharacterLimitForUser,
+  PREMIUM_CHARACTER_LIMIT,
+  syncSubscriptionStatus,
+} from "../utils/subscription";
 
 /**
  * @desc Create a new post
@@ -13,11 +20,28 @@ export const createPost = async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) return res.status(400).json({ message: "Content is required" });
 
+    const dbUser = await User.findById(req.user.id);
+    if (!dbUser) return res.status(404).json({ message: "User not found" });
+
+    await syncSubscriptionStatus(dbUser);
+    const characterLimit = getCharacterLimitForUser(dbUser);
+    const trimmedContent = content.trim();
+
+    if (trimmedContent.length > characterLimit) {
+      const upgradeMessage =
+        characterLimit === FREE_CHARACTER_LIMIT
+          ? `Upgrade to Premium to unlock up to ${PREMIUM_CHARACTER_LIMIT} characters.`
+          : "";
+      return res.status(400).json({
+        message: `Post content exceeds the ${characterLimit} character limit. ${upgradeMessage}`.trim(),
+      });
+    }
+
     const imageUrl = req.file ? `/uploads/post-images/${req.file.filename}` : null;
 
     const post = await Post.create({
       user: req.user.id,
-      content: content.trim(),
+      content: trimmedContent,
       imageUrl,
     });
 
@@ -115,9 +139,21 @@ export const updatePost = async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
     const { content, imageUrl } = req.body;
 
+    const dbUser = await User.findById(req.user.id);
+    if (!dbUser) return res.status(404).json({ message: "User not found" });
+
+    await syncSubscriptionStatus(dbUser);
+    const characterLimit = getCharacterLimitForUser(dbUser);
+
+    if (content && content.trim().length > characterLimit) {
+      return res.status(400).json({
+        message: `Post content exceeds the ${characterLimit} character limit.`,
+      });
+    }
+
     const post = await Post.findOneAndUpdate(
       { _id: req.params.postId, user: req.user.id },
-      { content, imageUrl },
+      { content: content?.trim(), imageUrl },
       { new: true, runValidators: true }
     );
 

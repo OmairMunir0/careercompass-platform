@@ -73,6 +73,9 @@ npm install
 PORT=3001
 MONGO_URI=mongodb://localhost:27017/your-db-name
 JWT_SECRET=your_secret_key
+STRIPE_SECRET_KEY=your_secret_stripe_key
+STRIPE_PREMIUM_PRICE_ID=price_123
+FRONTEND_URL=http://localhost:3000
 ```
 
 3. Seed in default entries in DB (Optional)

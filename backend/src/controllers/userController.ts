@@ -4,12 +4,14 @@ import path from "path";
 import { UserExperience } from "../models";
 import { Role } from "../models/Role";
 import { IUser, User } from "../models/User";
+import { isSubscriptionActive, syncSubscriptionStatus } from "../utils/subscription";
 
 // Response DTO
 export type UserResponseDto = Partial<IUser>;
 
 interface SafeUser extends Omit<IUser, "passwordHash" | "roleId"> {
   role: string;
+  isPremiumActive: boolean;
 }
 
 /**
@@ -21,16 +23,18 @@ export const getMe = async (req: Request, res: Response) => {
   if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
   try {
-    const user = await User.findById(req.user.id)
-      .populate<{ name: string }>("roleId", "name")
-      .lean<SafeUser & { roleId: { name: string } }>();
+    const user = await User.findById(req.user.id).populate<{ name: string }>("roleId", "name");
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { roleId, ...rest } = user;
+    await syncSubscriptionStatus(user);
+
+    const userObj = user.toObject();
+    const { roleId, passwordHash, ...rest } = userObj;
     const safeUser: SafeUser = {
       ...rest,
-      role: roleId.name,
+      role: (roleId as any).name,
+      isPremiumActive: isSubscriptionActive(user),
     };
 
     return res.status(200).json({ data: safeUser });
@@ -58,7 +62,10 @@ export const updateMe = async (req: Request, res: Response) => {
 
     const { passwordHash: _, ...safeUser } = user.toObject();
 
-    res.status(200).json({ message: "Profile updated", data: safeUser });
+    res.status(200).json({
+      message: "Profile updated",
+      data: { ...safeUser, isPremiumActive: isSubscriptionActive(user) },
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

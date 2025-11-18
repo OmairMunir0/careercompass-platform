@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { Role } from "../models/Role";
 import { IUser, User } from "../models/User";
+import { isSubscriptionActive, syncSubscriptionStatus } from "../utils/subscription";
 
 export type RegisterRequestBodyDto = {
   email: string;
@@ -75,9 +76,16 @@ export const registerUser = async (req: Request, res: Response) => {
     const tokenPayload = { userId: user._id, email: user.email, role: roleRecord.name };
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: "7d" });
 
+    const safeUser = {
+      ...user.toObject(),
+      passwordHash: undefined,
+      role: roleRecord.name,
+      isPremiumActive: isSubscriptionActive(user),
+    };
+
     res.status(201).json({
       message: "User registered successfully",
-      data: { token, user: { ...user.toObject(), passwordHash: undefined }, role: roleRecord.name },
+      data: { token, user: safeUser, role: roleRecord.name },
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -104,6 +112,8 @@ export const loginUser = async (req: Request, res: Response) => {
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) return res.status(401).json({ message: "Invalid email or password" });
 
+    await syncSubscriptionStatus(user);
+
     const tokenPayload = {
       userId: user._id,
       email: user.email,
@@ -111,11 +121,18 @@ export const loginUser = async (req: Request, res: Response) => {
     };
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: "7d" });
 
+    const safeUser = {
+      ...user.toObject(),
+      passwordHash: undefined,
+      role: roleRecord?.name ?? "unknown",
+      isPremiumActive: isSubscriptionActive(user),
+    };
+
     res.status(200).json({
       message: "Login successful",
       data: {
         token,
-        user: { ...user.toObject(), passwordHash: undefined },
+        user: safeUser,
         role: roleRecord?.name ?? "unknown",
       },
     });

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import { Blog, IBlog } from "../models/Blog";
 import { User } from "../models/User";
 import path from "path";
@@ -254,7 +255,9 @@ export const toggleLike = async (req: Request, res: Response) => {
     }
 
     const userId = req.user.id;
-    const likeIndex = blog.likes.findIndex((id) => id.toString() === userId.toString());
+    const likeIndex = blog.likes.findIndex(
+      (id: Types.ObjectId) => id.toString() === userId.toString()
+    );
 
     if (likeIndex === -1) {
       blog.likes.push(userId);

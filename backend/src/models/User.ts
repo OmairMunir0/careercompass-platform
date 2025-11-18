@@ -18,6 +18,13 @@ export interface IUser extends Document {
   position: string | null;
   imageUrl: string | null;
   resumeUrl: string | null;
+  subscriptionTier: "free" | "premium";
+  subscriptionStatus: "inactive" | "active" | "expired" | "canceled";
+  premiumExpiresAt: Date | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeCheckoutSessionId: string | null;
+  lastPaymentAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +48,17 @@ export const UserSchema = new Schema<IUser>(
     position: { type: String, default: null },
     imageUrl: { type: String, default: null },
     resumeUrl: { type: String, default: null },
+    subscriptionTier: { type: String, enum: ["free", "premium"], default: "free" },
+    subscriptionStatus: {
+      type: String,
+      enum: ["inactive", "active", "expired", "canceled"],
+      default: "inactive",
+    },
+    premiumExpiresAt: { type: Date, default: null },
+    stripeCustomerId: { type: String, default: null },
+    stripeSubscriptionId: { type: String, default: null },
+    stripeCheckoutSessionId: { type: String, default: null },
+    lastPaymentAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -9,6 +9,7 @@ import PostComposer from "@/components/PostComposer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserProfileCard from "@/components/UserProfileCard";
 import RightSidebar from "@/components/RightSidebar";
+import { billingService } from "@/services/billingService";
 
 interface User {
   _id: string;
@@ -50,8 +51,11 @@ const Timeline: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   const token = useAuthStore.getState().token;
+  const isPremiumPlan = Boolean((user as any)?.isPremiumActive);
+  const characterLimit = isPremiumPlan ? 2500 : 250;
 
   useEffect(() => {
     fetchPosts();
@@ -91,8 +95,44 @@ const Timeline: React.FC = () => {
     }
   };
 
+  const handleUpgrade = async () => {
+    if (!user) {
+      toast.error("Please sign in to upgrade.");
+      return;
+    }
+
+    try {
+      setIsUpgrading(true);
+      const baseUrl =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const successUrl = `${baseUrl}/billing/success`;
+      const cancelUrl = `${baseUrl}/billing/cancel`;
+
+      const response = await billingService.createCheckoutSession({ successUrl, cancelUrl });
+      if (response?.url) {
+        window.location.href = response.url;
+      } else {
+        toast.error("Unable to start checkout session.");
+      }
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Unable to start checkout.";
+      toast.error(message);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   const handlePost = async (content: string, imageFile: File | null) => {
     if (!content.trim() && !imageFile) return;
+    if (content.trim().length > characterLimit) {
+      toast.error(
+        `Posts on the ${isPremiumPlan ? "Premium" : "Free"} plan are limited to ${characterLimit} characters.`
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -108,8 +148,9 @@ const Timeline: React.FC = () => {
 
       setPosts((prev) => [res.data, ...prev]);
       toast.success("Post created!");
-    } catch {
-      toast.error("Failed to create post.");
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Failed to create post.";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -313,10 +354,14 @@ const Timeline: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900 mb-6">Timeline</h1>
           
           {/* Post Composer */}
-          <PostComposer 
-            user={user} 
-            onSubmit={handlePost} 
-            isSubmitting={submitting} 
+          <PostComposer
+            user={user}
+            onSubmit={handlePost}
+            isSubmitting={submitting}
+            characterLimit={characterLimit}
+            isPremiumPlan={isPremiumPlan}
+            onUpgradeClick={handleUpgrade}
+            isUpgrading={isUpgrading}
           />
           
           {/* Posts List */}
