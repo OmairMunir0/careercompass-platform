@@ -113,7 +113,7 @@ const UserProfilePage: React.FC = () => {
                     alt={`${profileUser.firstName} ${profileUser.lastName}`}
                     width={64}
                     height={64}
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 text-white text-2xl font-semibold">

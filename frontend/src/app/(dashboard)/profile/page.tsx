@@ -112,7 +112,7 @@ const Profile: React.FC = () => {
                     src={userImageUrl.startsWith("http") ? userImageUrl : `http://localhost:3001${userImageUrl}`}
                     alt={`${user.firstName} ${user.lastName}`}
                     fill
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">

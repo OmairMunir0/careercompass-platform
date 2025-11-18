@@ -141,7 +141,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
               alt={`${user.firstName} ${user.lastName}`} 
               width={48} 
               height={48} 
-              className="object-cover"
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 text-white text-lg font-semibold">
@@ -237,7 +237,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                   alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`} 
                   width={40} 
                   height={40} 
-                  className="object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 text-white text-sm font-semibold">

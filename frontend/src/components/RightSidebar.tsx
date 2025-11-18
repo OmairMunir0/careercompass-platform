@@ -109,7 +109,7 @@ const RightSidebar: React.FC = () => {
                         alt={`${post.user.firstName} ${post.user.lastName}`}
                         width={32}
                         height={32}
-                        className="object-cover"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold">
