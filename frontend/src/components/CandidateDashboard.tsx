@@ -1,8 +1,11 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { Heart, LucideIcon, MessageSquare, Search, User } from "lucide-react";
+import { Heart, LucideIcon, MessageSquare, Search, User, Mail, Phone, MapPin } from "lucide-react";
 import Link from "next/link";
+import { TextInput, TextAreaInput, PrimaryButton } from "@/components/ui";
+import React, { useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface StatCard {
   label: string;
@@ -21,6 +24,31 @@ interface ActionCard {
 const CandidateDashboard = () => {
   const { user } = useAuthStore();
   if (!user) return null;
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSending(true);
+    try {
+      await new Promise((res) => setTimeout(res, 800));
+      toast.success("Message sent successfully");
+      setName("");
+      setEmail("");
+      setMessage("");
+    } catch {
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
 
   // --- Static demo stats (replace with API data later)
   const stats: StatCard[] = [
@@ -113,6 +141,55 @@ const CandidateDashboard = () => {
           </Link>
         ))}
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-1">Contact</h2>
+          <p className="text-gray-600 mb-6">Reach out for support or inquiries.</p>
+          <div className="flex items-center gap-6 mb-6 text-gray-700">
+            <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-purple-600" /><span>l226910@lhr.nu.edu.pk</span></div>
+            <div className="flex items-center gap-2"><Phone className="h-5 w-5 text-purple-600" /><span>+92 3213232323</span></div>
+            <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-purple-600" /><span>Lahore, Pakistan</span></div>
+          </div>
+          <form onSubmit={handleContactSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <TextInput name="name" value={name} onChange={(e)=>setName(e.target.value)} placeholder="Your Name" required />
+              <TextInput name="email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="Email" required />
+            </div>
+            <TextAreaInput name="message" value={message} onChange={(e)=>setMessage(e.target.value)} placeholder="Message" rows={5} required />
+            <PrimaryButton type="submit" isLoading={sending} className="mt-2">Send Message</PrimaryButton>
+          </form>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-0 overflow-hidden">
+          <div className="p-6">
+            <h2 className="text-2xl font-semibold text-gray-900">Location</h2>
+            <p className="text-gray-600 mb-4">Find us on the map.</p>
+          </div>
+          <div className="w-full h-[320px]">
+            <iframe
+              title="SkillSeeker Location"
+              src="https://www.google.com/maps?q=Lahore,+Pakistan&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      </div>
+
+      <footer className="mt-12 bg-gray-100 rounded-lg border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-gray-700">© {new Date().getFullYear()} SkillSeeker. All rights reserved.</div>
+          <div className="flex gap-6 text-sm text-gray-600">
+            <Link href="/privacy" className="hover:text-purple-700">Privacy</Link>
+            <Link href="/terms" className="hover:text-purple-700">Terms</Link>
+            <Link href="/contact" className="hover:text-purple-700">Contact</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
