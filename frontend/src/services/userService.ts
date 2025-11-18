@@ -21,6 +21,13 @@ export interface IUser {
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  subscriptionTier: "free" | "premium";
+  subscriptionStatus: "inactive" | "active" | "expired" | "canceled";
+  premiumExpiresAt: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripeCheckoutSessionId: string | null;
+  lastPaymentAt: string | null;
 }
 
 export interface ISafeUser {
@@ -42,6 +49,14 @@ export interface ISafeUser {
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
+  subscriptionTier: "free" | "premium";
+  subscriptionStatus: "inactive" | "active" | "expired" | "canceled";
+  premiumExpiresAt: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  lastPaymentAt?: string | null;
+  isPremiumActive?: boolean;
 }
 
 export type UpdateMeDto = Partial<
