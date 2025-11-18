@@ -43,6 +43,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmit, isSubmittin
     setImageFile(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    window.location.reload();
   };
 
   const removeImage = () => {
