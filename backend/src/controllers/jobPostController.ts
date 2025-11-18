@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { JobApplication, SavedJob } from "../models";
 import { IJobPost, JobPost } from "../models/JobPost";
+import { UserSkill } from "../models/UserSkill";
+import { User } from "../models/User";
+import { createNotification } from "../utils/notifications";
+import { isSubscriptionActive } from "../utils/subscription";
 
 /**
  * @desc Create a new job post
@@ -21,6 +25,7 @@ export const createJobPost = async (req: Request, res: Response) => {
       experienceLevel,
       salaryMin,
       salaryMax,
+      requiredSkills,
     } = req.body;
 
     if (!title || !description || !salaryMin || !salaryMax)
@@ -36,9 +41,52 @@ export const createJobPost = async (req: Request, res: Response) => {
       experienceLevel: experienceLevel ?? null,
       salaryMin,
       salaryMax,
+      requiredSkills: requiredSkills || [],
     });
 
     await job.save();
+
+    // Notify Premium users whose skills match the job requirements
+    if (requiredSkills && Array.isArray(requiredSkills) && requiredSkills.length > 0) {
+      try {
+        // Find all Premium users who have at least one matching skill
+        const matchingUsers = await UserSkill.aggregate([
+          {
+            $match: {
+              skillId: { $in: requiredSkills.map((id: string) => new mongoose.Types.ObjectId(id)) },
+            },
+          },
+          {
+            $group: {
+              _id: "$user",
+            },
+          },
+        ]);
+
+        // Get user IDs and check if they're Premium
+        const userIds = matchingUsers.map((u) => u._id);
+        const premiumUsers = await User.find({
+          _id: { $in: userIds },
+        });
+
+        // Send notifications to Premium users
+        for (const user of premiumUsers) {
+          if (isSubscriptionActive(user)) {
+            await createNotification(
+              user._id,
+              "job_post",
+              "New Job Post Matching Your Skills",
+              `A new job "${title}" has been posted that matches your skills`,
+              job._id
+            );
+          }
+        }
+      } catch (notifError) {
+        console.error("Error sending job post notifications:", notifError);
+        // Don't fail job creation if notifications fail
+      }
+    }
+
     res.status(201).json(job);
   } catch (err: any) {
     res.status(500).json({ message: err.message });

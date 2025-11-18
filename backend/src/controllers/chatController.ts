@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Chat, IMessage } from "../models/Chat";
+import { createNotification } from "../utils/notifications";
 
 /**
  * @desc Create a new chat between recruiter and candidate
@@ -139,6 +140,24 @@ export const addMessage = async (req: Request, res: Response) => {
 
     // Fetch the last message again with populated sender
     const newMsg = chat.messages[chat.messages.length - 1];
+
+    // Create notification for the other participant
+    const receiverId = chat.recruiter.toString() === req.body.sender 
+      ? chat.candidate 
+      : chat.recruiter;
+    
+    if (receiverId && receiverId.toString() !== req.body.sender) {
+      const { User } = await import("../models/User");
+      const sender = await User.findById(req.body.sender);
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : "Someone";
+      await createNotification(
+        receiverId,
+        "chat_message",
+        "New Message",
+        `${senderName} sent you a message`,
+        chat._id
+      );
+    }
 
     res.status(201).json(newMsg);
   } catch (err: any) {

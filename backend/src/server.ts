@@ -3,12 +3,14 @@ import app from "./app";
 import { connectDB, disconnectDB } from "./config/db";
 import { disconnectRedis } from "./config/redis";
 import { ensureUploadDirs } from "./config/dirs";
+import { initializeWebPush } from "./utils/notifications";
 
 const PORT = Number(process.env.PORT);
 
 (async () => {
   await ensureUploadDirs();
   await connectDB();
+  initializeWebPush();
 
   const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

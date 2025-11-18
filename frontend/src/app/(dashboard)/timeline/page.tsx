@@ -9,7 +9,9 @@ import PostComposer from "@/components/PostComposer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserProfileCard from "@/components/UserProfileCard";
 import RightSidebar from "@/components/RightSidebar";
+import NotificationCenter from "@/components/NotificationCenter";
 import { billingService } from "@/services/billingService";
+import { useWebPush } from "@/hooks/useWebPush";
 
 interface User {
   _id: string;
@@ -57,6 +59,16 @@ const Timeline: React.FC = () => {
   const isPremiumPlan = Boolean((user as any)?.isPremiumActive);
   const characterLimit = isPremiumPlan ? 2500 : 250;
 
+  // Initialize web push for Premium users
+  const { subscribe } = useWebPush();
+  
+  useEffect(() => {
+    if (isPremiumPlan) {
+      // Request push notification permission and subscribe
+      subscribe();
+    }
+  }, [isPremiumPlan, subscribe]);
+
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -66,7 +78,7 @@ const Timeline: React.FC = () => {
     try {
       const res = await axiosInstance.get("/posts");
       // Map imageUrl to profileImage for compatibility
-      const postsWithProfileImages = res.data.map((post: Post) => ({
+      const postsWithProfileImages = res.data.map((post: Post & { isLiked?: boolean }) => ({
         ...post,
         user: {
           ...post.user,
@@ -88,6 +100,15 @@ const Timeline: React.FC = () => {
         })),
       }));
       setPosts(postsWithProfileImages);
+      
+      // Initialize likedPosts from API response
+      const likedPostsMap: Record<string, boolean> = {};
+      postsWithProfileImages.forEach((post: Post & { isLiked?: boolean }) => {
+        if (post.isLiked) {
+          likedPostsMap[post._id] = true;
+        }
+      });
+      setLikedPosts(likedPostsMap);
     } catch {
       toast.error("Failed to load posts.");
     } finally {
@@ -174,7 +195,7 @@ const Timeline: React.FC = () => {
     try {
       const res = await axiosInstance.put(`/posts/${postId}/${isLiked ? "unlike" : "like"}`);
       setPosts((prev) => prev.map((p) => (p._id === postId ? { ...p, likes: res.data.likes } : p)));
-      setLikedPosts((prev) => ({ ...prev, [postId]: !isLiked }));
+      setLikedPosts((prev) => ({ ...prev, [postId]: res.data.isLiked ?? !isLiked }));
     } catch {
       toast.error("Failed to update like.");
     }
@@ -404,6 +425,9 @@ const Timeline: React.FC = () => {
           <RightSidebar />
         </aside>
       </div>
+
+      {/* Notification Center - Bottom Left (Premium Only) */}
+      <NotificationCenter isPremium={isPremiumPlan} />
     </div>
   );
 };
