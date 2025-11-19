@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import CertificationForm, { Certification } from "./CertificationForm";
 import { PrimaryButton, SecondaryButton } from "./ui";
+import { formatDate } from "@/lib/date";
 
 export default function CertificationManager() {
   const [certifications, setCertifications] = useState<Certification[]>([]);
@@ -88,7 +89,7 @@ export default function CertificationManager() {
                 <div className="font-medium">{cert.name}</div>
                 <div className="text-sm text-gray-700">{cert.issuingOrganization}</div>
                 <div className="text-xs text-gray-500">
-                  {cert.issueDate} → {cert.expiryDate ?? "Present"}
+                  {formatDate(cert.issueDate)} → {formatDate(cert.expiryDate) ?? "Present"}
                 </div>
               </div>
               <div className="flex gap-2">

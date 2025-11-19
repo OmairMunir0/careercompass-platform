@@ -4,8 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio
 from app.utils.analysis import get_whisper_model
-from app.utils.accuracy import _load_model, _MODEL
-from app.utils.job_post_score import load_rec_model, rec_model
+from app.utils.accuracy import _load_model
+from app.utils.job_post_score import load_rec_model
 
 # Global task tracker
 background_tasks = set()
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
             asyncio.to_thread(_load_model),
             asyncio.to_thread(load_rec_model)
         )
-        print("Models preloaded: Whisper + SentenceTransformer")
+        print("Models preloaded: Whisper + SentenceTransformer + Accuracy Model")
     except Exception as e:
         print(f"Model preload failed: {e}")
     yield

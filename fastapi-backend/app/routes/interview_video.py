@@ -30,7 +30,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter()
-model = SentenceTransformer(MODEL)
+# model = SentenceTransformer(MODEL)
 
 
 @router.post("/upload")

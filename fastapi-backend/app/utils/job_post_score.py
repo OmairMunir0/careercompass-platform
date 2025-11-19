@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
@@ -17,7 +17,7 @@ def load_rec_model():
     print("[JobPostScore] Loading recommendation model...")
     rec_model = SentenceTransformer(AI_MODEL)
     print("[JobPostScore] Model loaded successfully!")
-    return rec_model  # optional, but safe
+    return rec_model  
 
 class RecommendedJob(BaseModel):
     jobId: str
@@ -27,8 +27,9 @@ class RecommendedJob(BaseModel):
     workMode: str
     salaryMin: int
     salaryMax: int
-    matchScore: int  # 0–100
-    matchingSkills: List[str]
+    matchScore: int              
+    matchingSkills: List[str]      
+    description: Optional[str] = None
 
 def build_user_text(user: Dict[Any, Any]) -> str:
     return f"""
@@ -39,7 +40,7 @@ def build_user_text(user: Dict[Any, Any]) -> str:
     """.strip().lower()
 
 def build_job_text(job: Dict[Any, Any]) -> str:
-    all_skills = job.get('requiredSkills', []) + job.get('niceToHaveSkills', [])
+    all_skills = job.get('requiredSkills', [])
     return f"""
     {job.get('title', '')} at {job.get('company', '')}
     location: {job.get('location', '')} | work mode: {job.get('workMode', '')} | salary: €{job.get('salaryMin',0)//1000}k–€{job.get('salaryMax',0)//1000}k
@@ -65,8 +66,11 @@ def get_recommended_jobs_for_user(
     job_texts = [build_job_text(job) for job in jobposts]
     job_embeddings = rec_model.encode(job_texts)
 
+    print("user text:", user_text)
+    print("\njob texts:", job_texts)
+
     # Cosine similarity
-    similarities = cosine_similarity(user_embedding, job_embeddings)[0][0]
+    similarities = cosine_similarity(user_embedding, job_embeddings)[0]
 
     results = []
     user_skills_lower = {s.lower() for s in user.get('skills', [])}
@@ -76,7 +80,7 @@ def get_recommended_jobs_for_user(
             continue
 
         # Find common skills (case-insensitive)
-        job_all_skills = job.get('requiredSkills', []) + job.get('niceToHaveSkills', [])
+        job_all_skills = job.get('requiredSkills', [])
         common = [s for s in job_all_skills if s.lower() in user_skills_lower]
 
         results.append({

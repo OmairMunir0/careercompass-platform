@@ -1,5 +1,6 @@
 // src/components/jobs/JobList.tsx
 import { useEffect, useState } from "react";
+import { formatDate } from "@/lib/date";
 import axiosInstance from "@/lib/axiosInstance";
 
 // match API payload from listJobPostings
@@ -72,9 +73,7 @@ export default function JobList() {
             </span>
           </div>
 
-          <div className="mt-2 text-xs text-gray-400">
-            Posted {new Date(job.createdAt).toLocaleDateString()}
-          </div>
+          <div className="mt-2 text-xs text-gray-400">Posted {formatDate(job.createdAt)}</div>
         </div>
       ))}
     </div>

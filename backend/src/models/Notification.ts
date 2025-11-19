@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-export type NotificationType = "post_like" | "post_comment" | "chat_message" | "job_post";
+export type NotificationType = "post_like" | "post_comment" | "chat_message" | "job_post" | "job_application";
 
 export interface INotification extends Document {
   user: Types.ObjectId;
@@ -18,7 +18,7 @@ const NotificationSchema = new Schema<INotification>(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     type: {
       type: String,
-      enum: ["post_like", "post_comment", "chat_message", "job_post"],
+      enum: ["post_like", "post_comment", "chat_message", "job_post", "job_application"],
       required: true,
     },
     title: { type: String, required: true },

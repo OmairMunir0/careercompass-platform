@@ -5,6 +5,7 @@ import { Pen, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import ExperienceForm from "./ExperienceForm";
+import { formatDate } from "@/lib/date";
 import { PrimaryButton, SecondaryButton } from "./ui";
 
 interface Experience {
@@ -101,7 +102,7 @@ export default function ExperienceManager() {
                 <div className="font-medium">{exp.jobTitle}</div>
                 <div className="text-sm text-gray-700">{exp.company}</div>
                 <div className="text-xs text-gray-500">
-                  {exp.startDate} → {exp.isCurrent ? "Present" : exp.endDate ?? "—"}
+                  {formatDate(exp.startDate, "MMM yyyy")} → {exp.isCurrent ? "Present" : exp.endDate ? formatDate(exp.endDate, "MMM yyyy") : "—"}
                 </div>
               </div>
               <div className="flex gap-2">

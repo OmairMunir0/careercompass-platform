@@ -22,6 +22,30 @@ sentence-transformers>=3.2.0
 numpy>=2.0.0
 pandas>=2.2.0
 matplotlib>=3.9.0
+# Core Web & API
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# OpenAI & Whisper
+openai>=1.51.0
+openai-whisper>=20240930  # Local Whisper (CPU/GPU)
+whisper
+
+# Video / Face Analysis (no mediapipe)
+# opencv-python>=4.10.0
+# deepface>=0.0.89  # Uses OpenCV + TF/Keras, not MediaPipe
+SpeechRecognition>=3.10.0
+
+# ML / Transformers
+# torch>=2.5.0 --index-url https://download.pytorch.org/whl/cpu
+# torchvision>=0.20.0 --index-url https://download.pytorch.org/whl/cpu
+transformers>=4.45.0
+sentence-transformers>=3.2.0
+
+# Utilities
+numpy>=2.0.0
+pandas>=2.2.0
+matplotlib>=3.9.0
 tqdm>=4.66.5
 language-tool-python>=2.8.2
 python-dotenv>=1.0.1
@@ -29,3 +53,4 @@ python-dotenv>=1.0.1
 # Misc
 pydantic>=2.9.0
 python-multipart>=0.0.9
+pymongo>=4.8.0

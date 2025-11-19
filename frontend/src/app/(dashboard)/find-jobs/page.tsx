@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
+import { formatDate } from "@/lib/date";
 
 interface IJobSkill {
   id: string;
@@ -368,14 +369,7 @@ const CandidateJobsPage: React.FC = () => {
 
             {/* Footer */}
             <div className="flex justify-between items-center mt-5 text-xs text-gray-500">
-              <span>
-                Posted{" "}
-                {new Date(job.createdAt || "").toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
+              <span>Posted {formatDate(job.createdAt || "")}</span>
               <span className="text-purple-600 font-medium">
                 <span className="text-gray-600">Job Mode:</span> {job.workMode?.name || "—"}
               </span>

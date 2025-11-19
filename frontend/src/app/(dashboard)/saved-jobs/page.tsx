@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { formatDate } from "@/lib/date";
 
 interface SavedJob {
   _id: string;
@@ -140,12 +141,7 @@ const SavedJobsPage: React.FC = () => {
     return `Up to $${(max! / 1000).toFixed(0)}k`;
   };
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const formatSavedDate = (date: string) => formatDate(date);
 
   if (loading)
     return (
@@ -298,7 +294,7 @@ const SavedJobsPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                          <span>Saved {formatDate(sj.createdAt)}</span>
+                          <span>Saved {formatSavedDate(sj.createdAt)}</span>
                         </div>
                       </div>
 

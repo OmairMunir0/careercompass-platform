@@ -17,7 +17,6 @@ ANSWER_TIME = int(os.getenv("ANSWER_TIME", "40"))
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# GLOBAL WHISPER MODEL — THIS IS THE KEY
 _whisper_model = None
 
 def get_whisper_model():
@@ -29,6 +28,7 @@ def get_whisper_model():
         print("[Whisper] Model loaded and ready for transcription! 🎤")
     return _whisper_model
 
+
 # === 1. Save uploaded video ===
 def save_uploaded_video(file) -> str:
     file_location = os.path.join(UPLOAD_DIR, file.filename)
@@ -36,6 +36,7 @@ def save_uploaded_video(file) -> str:
         content = file.file.read()
         f.write(content)
     return file_location
+
 
 # === 2. Extract audio to temp MP3 (smaller & faster) ===
 def extract_audio_to_wav(video_path: str) -> str:
@@ -66,6 +67,7 @@ def extract_audio_to_wav(video_path: str) -> str:
 
     return tmp_mp3_path
 
+
 # === 3. Transcribe + Split into 40-second chunks ===
 def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -> Tuple[str, List[str]]:
     if not os.path.exists(audio_path):
@@ -73,7 +75,7 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     
     segment_duration = float(segment_duration)
 
-    model = get_whisper_model()  # ← uses pre-loaded global model (instant)
+    model = get_whisper_model() 
 
     print("[Whisper] Starting transcription...")
     result = model.transcribe(audio_path, word_timestamps=True)
@@ -93,6 +95,7 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     print(f"[Whisper] Transcription complete → {len(chunks)} chunks")
 
     return full_transcript, chunks
+
 
 # === 4. Clean up temp files ===
 def cleanup_temp_file(path: str) -> None:

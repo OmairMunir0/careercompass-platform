@@ -8,6 +8,7 @@ import Link from "next/link";
 import JobPostingsStats from "@/components/JobPostingsStats";
 import JobFilters from "@/components/JobFilters";
 import JobCard from "@/components/JobCard";
+import { formatDate } from "@/lib/date";
 
 type JobStatus = "ALL" | "ACTIVE" | "PAUSED" | "CLOSED" | "DRAFT";
 
@@ -134,12 +135,7 @@ const ManageJobsPage: React.FC = () => {
     return labels[type as keyof typeof labels] || type;
   };
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const formatPostedDate = (dateString: string) => formatDate(dateString);
 
   const stats = {
     active: jobs.filter((job) => job.status === "ACTIVE").length,
@@ -212,7 +208,7 @@ const ManageJobsPage: React.FC = () => {
               <JobCard
                 key={job.id}
                 job={job}
-                formatDate={formatDate}
+                formatDate={formatPostedDate}
                 formatSalary={formatSalary}
                 getJobTypeLabel={getJobTypeLabel}
                 getStatusColor={getStatusColor}

@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import EducationForm, { Education } from "./EducationForm";
 import { PrimaryButton, SecondaryButton } from "./ui";
+import { formatDate } from "@/lib/date";
+
 
 export default function EducationManager() {
   const [educations, setEducations] = useState<Education[]>([]);
@@ -90,7 +92,7 @@ export default function EducationManager() {
                 <div className="font-medium">{edu.degree}</div>
                 <div className="text-sm text-gray-700">{edu.institution}</div>
                 <div className="text-xs text-gray-500">
-                  {edu.startDate} → {edu.endDate ?? "Present"}
+                  {formatDate(edu.startDate)} → {formatDate(edu.endDate) ?? "Present"}
                 </div>
               </div>
               <div className="flex gap-2">

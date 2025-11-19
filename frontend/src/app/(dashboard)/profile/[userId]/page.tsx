@@ -29,6 +29,7 @@ interface ProfileUser {
   companyName?: string;
   companyWebsite?: string;
   position?: string;
+  linkedinUrl?: string;
 }
 
 const UserProfilePage: React.FC = () => {
@@ -217,6 +218,21 @@ const UserProfilePage: React.FC = () => {
                         className="text-purple-600 hover:underline"
                       >
                         {profileUser.companyWebsite}
+                      </a>
+                    ) : (
+                      <p className="text-gray-900">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn</label>
+                    {profileUser.linkedinUrl ? (
+                      <a
+                        href={profileUser.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 hover:underline"
+                      >
+                        {profileUser.linkedinUrl}
                       </a>
                     ) : (
                       <p className="text-gray-900">—</p>

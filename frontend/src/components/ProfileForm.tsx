@@ -2,7 +2,7 @@
 
 import { ISafeUser, UpdateMeDto, userService } from "@/services/userService";
 import { useAuthStore } from "@/store/authStore";
-import { Briefcase, Building, Clipboard, Mail, MapPin, Phone, User } from "lucide-react";
+import { Briefcase, Building, Clipboard, Mail, MapPin, Phone, User, Linkedin } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { PrimaryButton, SecondaryButton, TextAreaInput, TextInput } from "./ui";
@@ -21,6 +21,7 @@ const PersonalInfoForm: React.FC = () => {
     companyName: "",
     companyWebsite: "",
     position: "",
+    linkedinUrl: "",
   };
 
   const [personalInfo, setPersonalInfo] =
@@ -41,6 +42,7 @@ const PersonalInfoForm: React.FC = () => {
           companyName: user.companyName || "",
           companyWebsite: user.companyWebsite || "",
           position: user.position || "",
+          linkedinUrl: user.linkedinUrl || "",
         });
       } catch (err) {
         console.error("Failed to load user:", err);
@@ -98,6 +100,7 @@ const PersonalInfoForm: React.FC = () => {
         <TextInput
           id="publicEmail"
           name="publicEmail"
+          type="email"
           placeholder="Public Email"
           value={personalInfo.publicEmail || ""}
           onChange={handleChange}
@@ -107,6 +110,7 @@ const PersonalInfoForm: React.FC = () => {
         <TextInput
           id="phone"
           name="phone"
+          type="tel"
           placeholder="Phone"
           value={personalInfo.phone || ""}
           onChange={handleChange}
@@ -134,11 +138,22 @@ const PersonalInfoForm: React.FC = () => {
         <TextInput
           id="companyWebsite"
           name="companyWebsite"
+          type="url"
           placeholder="Company Website"
           value={personalInfo.companyWebsite || ""}
           onChange={handleChange}
           icon={Clipboard}
 
+        />
+
+        <TextInput
+          id="linkedinUrl"
+          name="linkedinUrl"
+          type="url"
+          placeholder="LinkedIn URL"
+          value={personalInfo.linkedinUrl || ""}
+          onChange={handleChange}
+          icon={Linkedin}
         />
 
         <TextInput

@@ -5,6 +5,8 @@ import { useAuthStore } from "@/store/authStore";
 import { Briefcase, Eye, MapPin, MessageSquare, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { formatDate, formatDateTime } from "@/lib/date";
 
 interface UserData {
   _id: string;
@@ -39,6 +41,24 @@ interface IMessage {
   isRead: boolean;
 }
 
+interface JobApplication {
+  _id: string;
+  user: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
+  job: {
+    _id: string;
+    title: string;
+  };
+  coverLetter?: string | null;
+  resumeUrl?: string | null;
+  status: { _id: string; name: string };
+  appliedAt: string;
+}
+
 interface IChat {
   _id: string;
   participantId: string;
@@ -66,6 +86,9 @@ const CandidateSearch: React.FC = () => {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [chats, setConversations] = useState<IChat[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [statuses, setStatuses] = useState<Array<{ _id: string; name: string }>>([]);
 
   // Load users
   useEffect(() => {
@@ -85,6 +108,50 @@ const CandidateSearch: React.FC = () => {
     };
     loadUsers();
   }, [searchQuery]);
+
+  useEffect(() => {
+    const loadApplications = async () => {
+      try {
+        setAppsLoading(true);
+        const { data } = await axiosInstance.get<JobApplication[]>("/job-applications");
+        setApplications(data || []);
+      } catch (err) {
+        console.error("Failed to load job applications:", err);
+        setApplications([]);
+      } finally {
+        setAppsLoading(false);
+      }
+    };
+    loadApplications();
+  }, []);
+
+  useEffect(() => {
+    const loadStatuses = async () => {
+      try {
+        const { data } = await axiosInstance.get<Array<{ _id: string; name: string }>>(
+          "/job-application-statuses"
+        );
+        setStatuses(data || []);
+      } catch (err) {
+        console.error("Failed to load statuses:", err);
+      }
+    };
+    loadStatuses();
+  }, []);
+
+  const handleChangeApplicationStatus = async (appId: string, statusId: string) => {
+    try {
+      const res = await axiosInstance.put(`/job-applications/${appId}/status`, { statusId });
+      const updated = res.data?.data as JobApplication;
+      setApplications((prev) => prev.map((a) => (a._id === appId ? updated : a)));
+      toast.success("Application status updated");
+    } catch (err: any) {
+      console.error("Failed to update application status:", err);
+      toast.error(err?.response?.data?.message || "Failed to update status");
+    }
+  };
+
+  console.log(applications);
 
   // Load experiences for users
   useEffect(() => {
@@ -197,6 +264,114 @@ const CandidateSearch: React.FC = () => {
           />
         </div>
 
+        {/* Applications Overview */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Job Applications</h2>
+            <span className="text-sm text-gray-600">
+              Total: {applications.length}
+            </span>
+          </div>
+
+          {appsLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="animate-spin h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full" />
+            </div>
+          ) : applications.length === 0 ? (
+            <p className="text-gray-600">No job applications yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {applications.map((app) => (
+                <div
+                  key={app._id}
+                  className="bg-gray-50 border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-gray-500">Candidate</div>
+                      <div className="font-semibold text-gray-900">
+                        {(app.user.firstName || app.user.lastName)
+                          ? `${app.user.firstName || ""} ${app.user.lastName || ""}`.trim()
+                          : app.user._id}
+                      </div>
+                      {app.user.email && (
+                        <div className="text-sm text-gray-600">{app.user.email}</div>
+                      )}
+                    </div>
+
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        /pending/i.test(app.status.name)
+                          ? "bg-yellow-100 text-yellow-800"
+                          : /accepted|approved/i.test(app.status.name)
+                          ? "bg-green-100 text-green-800"
+                          : /rejected|declined/i.test(app.status.name)
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {app.status.name}
+                    </span>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="text-sm text-gray-500">Job</div>
+                    <div className="text-gray-900 font-medium">{app.job.title}</div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
+                    <div>Applied {formatDate(app.appliedAt)}</div>
+                    <div className="text-gray-500">{formatDateTime(app.appliedAt, "EEE, h:mm a")}</div>
+                  </div>
+
+                  {app.coverLetter && (
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-500 mb-1">Cover Letter</div>
+                      <p className="text-sm text-gray-800 line-clamp-4 whitespace-pre-wrap">{app.coverLetter}</p>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex items-center space-x-2">
+                    {app.resumeUrl ? (
+                      <a
+                        href={app.resumeUrl.startsWith("http") ? app.resumeUrl : `http://localhost:3001/${app.resumeUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                      >
+                        View Resume
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-500">No resume attached</span>
+                    )}
+                    <button
+                      onClick={() => handleStartConversation(app.user._id)}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      Message
+                    </button>
+                    {statuses.length > 0 && (
+                      <div className="ml-auto flex items-center gap-1">
+                        <select
+                          value={app.status?._id || ""}
+                          onChange={(e) => handleChangeApplicationStatus(app._id, e.target.value)}
+                          className="p-1 border border-gray-300 rounded-md text-sm"
+                        >
+                          {statuses.map((s) => (
+                            <option key={s._id} value={s._id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {filteredUsers.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -266,8 +441,7 @@ const CandidateSearch: React.FC = () => {
                         <h5 className="font-medium text-gray-900">{exp.jobTitle}</h5>
                         <p className="text-purple-600">{exp.company}</p>
                         <p className="text-sm text-gray-600">
-                          {new Date(exp.startDate).getFullYear()} -{" "}
-                          {exp.endDate ? new Date(exp.endDate).getFullYear() : "Present"}
+                          {formatDate(exp.startDate, "MMM yyyy")} - {exp.endDate ? formatDate(exp.endDate, "MMM yyyy") : "Present"}
                         </p>
                         <p className="text-sm text-gray-700 mt-1">{exp.description}</p>
                       </div>

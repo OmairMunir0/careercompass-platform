@@ -6,13 +6,9 @@ from sentence_transformers import SentenceTransformer
 import openai
 import json
 import urllib.parse
+from ..utils.job_post_score import get_recommended_jobs_for_user, RecommendedJob
 from dotenv import load_dotenv
-from ..utils.analysis import (
-    save_uploaded_video,
-    extract_audio_to_wav,
-    transcribe_and_split,
-    cleanup_temp_file,
-)
+from ..db.job_posts import get_job_posts, get_db
 
 load_dotenv()  
 
@@ -24,17 +20,24 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter()
-model = SentenceTransformer(MODEL)
+# model = SentenceTransformer(MODEL)
 
 
-@router.post("/job-posts")
-async def upload_video() -> Dict:
+@router.get("/recommended-jobs", response_model=List[RecommendedJob])
+async def get_recommended():
+    
+    # 1. Fetch JobPosts from MongoDB
+    jobposts = get_job_posts()
+    
+    # 2. Extract user attributes
+    user = {
+        "position": "Software Engineer",
+        "yearsExperience": 3,
+        "skills": ["Python", "FastAPI", "MongoDB", "Machine Learning"],
+        "location": "Berlin, Germany",
+        "preferredLocations": ["Remote", "Berlin"],
+        "preferredWorkMode": "Remote"
+    }
 
-    try:
-        return {"message": "This endpoint is under construction."}
-
-    except Exception as e:
-        raise RuntimeError(f"Processing failed: {e}")
-    finally:
-        # Cleanup temp files if they were created
-        pass
+    recommended = get_recommended_jobs_for_user(user, jobposts)
+    return recommended

@@ -73,7 +73,7 @@ const getAuthNavItems = (role: "candidate" | "recruiter" | "admin"): NavItem[] =
       { href: "/interviews", label: "Practice Interview", icon: Briefcase },
       { href: "/chats", label: "Chats", icon: MessageSquare },
       { href: "/job-posts", label: "Job Posts", icon: Briefcase },
-      { href: "/search-candidate", label: "Find Candidates", icon: Search },
+      { href: "/search-candidates", label: "Find Candidates", icon: Search },
       { href: "/profile", label: "Profile", icon: User },
     ];
   }

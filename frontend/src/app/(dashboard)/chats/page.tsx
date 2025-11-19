@@ -4,6 +4,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowLeft, Building, Check, CheckCheck, Search, Send, User } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { formatDate, formatDateTime } from "@/lib/date";
 
 interface Message {
   _id: string;
@@ -172,9 +173,9 @@ const ChatsPage: React.FC = () => {
     const date = new Date(dateString);
     const now = new Date();
     const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    if (diffHours < 24) return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    if (diffHours < 168) return date.toLocaleDateString([], { weekday: "short" });
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+    if (diffHours < 24) return formatDateTime(date, "h:mm a");
+    if (diffHours < 168) return formatDateTime(date, "EEE");
+    return formatDate(date);
   };
 
   const filteredConversations = chats.filter((conv) =>

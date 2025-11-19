@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { IJobApplication, JobApplication } from "../models/JobApplication";
 import { JobApplicationStatus } from "../models/JobApplicationStatus";
+import { createNotification } from "../utils/notifications";
 
 /**
  * @desc Apply to a specific job
@@ -230,6 +231,17 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     ).populate("user job status");
 
     if (!application) return res.status(404).json({ message: "Application not found" });
+    try {
+      await createNotification(
+        application.user,
+        "job_application",
+        "Application Status Updated",
+        `Your application for '${application.job?.title || "the job"}' is now '${application.status?.name || "updated"}'.`,
+        application.job?._id || application._id
+      );
+    } catch (notifyErr) {
+      console.error("Failed to create notification for application status change:", notifyErr);
+    }
     res.status(200).json({ message: "Application status updated", data: application });
   } catch (err: any) {
     res.status(500).json({ message: err.message });

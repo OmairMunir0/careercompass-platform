@@ -2,6 +2,7 @@
 
 import axiosInstance from "@/lib/axiosInstance";
 import { Pen, Trash2 } from "lucide-react";
+import { formatDate } from "@/lib/date";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { PrimaryButton, SecondaryButton } from "./ui";
@@ -99,9 +100,7 @@ export default function ApplicationManager() {
               <div className="cursor-pointer" onClick={() => handleEdit(app)}>
                 <div className="font-medium">{app.job.title}</div>
                 <div className="text-sm text-gray-700">Status: {app.status.name}</div>
-                <div className="text-xs text-gray-500">
-                  Applied: {new Date(app.appliedAt).toLocaleDateString()}
-                </div>
+                <div className="text-xs text-gray-500">Applied: {formatDate(app.appliedAt)}</div>
               </div>
               <div className="flex gap-2">
                 <button
