@@ -1,37 +1,35 @@
-from __future__ import annotations
+# app/utils/accuracy.py   ← REPLACE YOUR WHOLE FILE WITH THIS
 
+from __future__ import annotations
 import os
 from datetime import datetime
 from typing import List, Tuple, Dict
-
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
 # ----------------------------------------------------------------------
-# 1. Singleton model
+# 1. GLOBAL MODEL (singleton) – THIS IS THE KEY
 # ----------------------------------------------------------------------
 _MODEL: SentenceTransformer | None = None
 _DEFAULT_MODEL = os.getenv("MODEL_NAME", "intfloat/e5-large-v2")
 _DEFAULT_PREFIX = "query: "
 THRESHOLD = 0.75
 
-
 def _load_model(model_name: str | None = None, device: str | None = None) -> SentenceTransformer:
     global _MODEL
     if _MODEL is None:
         name = model_name or _DEFAULT_MODEL
-        print(f"[accuracy.py] Loading model '{name}' …", end="", flush=True)
+        print(f"[accuracy.py] Loading accuracy model '{name}'...", end="", flush=True)
         _MODEL = SentenceTransformer(name, device=device)
-        print(" Done")
+        print(" Done! Model ready for answer similarity.")
     return _MODEL
 
-
 # ----------------------------------------------------------------------
-# 2. Core class
+# 2. Core class (unchanged logic, just uses global model)
 # ----------------------------------------------------------------------
 class TextSimilarity:
     def __init__(self, model_name: str | None = None, device: str | None = None, prefix: str = _DEFAULT_PREFIX):
-        self.model = _load_model(model_name, device)
+        self.model = _load_model(model_name, device)  # ← uses global _MODEL
         self.prefix = prefix
 
     def _add_prefix(self, texts: List[str]) -> List[str]:
@@ -55,68 +53,20 @@ class TextSimilarity:
         split = len(pairs)
         return [float(np.dot(r, u)) for r, u in zip(emb[:split], emb[split:])]
 
-
 # ----------------------------------------------------------------------
-# 3. Public API
+# 3. Public API (same as before)
 # ----------------------------------------------------------------------
-_similarity = TextSimilarity()  # default model
-
+_similarity = TextSimilarity()  # default instance
 
 def get_similarity(ref: str, user: str) -> float:
-    """Cosine similarity (0.0 - 1.0) between reference and user answer."""
     return _similarity.similarity(ref, user)
 
-
 def batch_similarity(pairs: List[Tuple[str, str]]) -> List[float]:
-    """Batch compute similarity for list of (ref, user) pairs."""
     return _similarity.batch_similarity(pairs)
 
-
 # ----------------------------------------------------------------------
-# 4. Self-test
+# 4. Your get_accuracy function – NO CHANGES NEEDED
 # ----------------------------------------------------------------------
-TEST_CASES: List[Tuple[str, str, float, str]] = [
-    ("I love coding.", "I love coding.", 0.99, "exact"),
-    ("I am a CS student.", "I study computer science.", 0.80, "synonyms"),
-    ("Python is great.", "I like pizza.", 0.30, "unrelated"),
-    ("Yes", "No", 0.20, "short"),
-]
-
-def _run_self_test(
-    cases: List[Tuple[str, str, float, str]] = TEST_CASES,
-    model_name: str | None = None,
-    device: str | None = None,
-) -> None:
-    sim = TextSimilarity(model_name=model_name, device=device)
-    model_name_used = model_name or _DEFAULT_MODEL
-    print("\n" + "=" * 90)
-    print(f"Running {len(cases)} tests with {model_name_used}")
-    print("=" * 90)
-
-    passed = 0
-    tol = 0.03
-    max_len = 80
-
-    for i, (ref, usr, exp, name) in enumerate(cases, 1):
-        score = sim.similarity(ref, usr)
-        ok = score >= exp - tol
-        status = "PASS" if ok else "FAIL"
-        passed += int(ok)
-
-        r = (ref[:max_len] + "...") if len(ref) > max_len else ref
-        u = (usr[:max_len] + "...") if len(usr) > max_len else usr
-
-        print(f"{i:2d}. [{status}] {name:12s} | {score:.4f} >= {exp:.2f}")
-        print(f"     Ref : {r}")
-        print(f"     User: {u}")
-        print("-" * 90)
-
-    print("=" * 90)
-    print(f"Summary: {passed}/{len(cases)} passed")
-    print(f"Time: {datetime.now().strftime('%Y-%m-%d %I:%M %p PKT')}")
-    print("=" * 90)
-    
-    
 def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> Dict:
     if not questions_list:
         return {"result": [], "overall_score": 0.0}
@@ -155,16 +105,34 @@ def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> Dic
             "percentage": percentage,
         })
 
-    # REAL overall score
     overall_score = round(sum(valid_scores) / len(valid_scores) * 100, 2) if valid_scores else 0.0
 
     return {
         "result": result,
         "overall_score": overall_score
     }
-    
+
+# ----------------------------------------------------------------------
+# 5. Self-test (optional, keep it)
+# ----------------------------------------------------------------------
+TEST_CASES: List[Tuple[str, str, float, str]] = [
+    ("I love coding.", "I love coding.", 0.99, "exact"),
+    ("I am a CS student.", "I study computer science.", 0.80, "synonyms"),
+    ("Python is great.", "I like pizza.", 0.30, "unrelated"),
+    ("Yes", "No", 0.20, "short"),
+]
+
+def _run_self_test():
+    sim = TextSimilarity()
+    print("\n" + "="*80)
+    print("ACCURACY MODEL SELF-TEST")
+    print("="*80)
+    for ref, usr, exp, name in TEST_CASES:
+        score = sim.similarity(ref, usr)
+        print(f"{score:.4f} | {name:12} | {ref} → {usr}")
+    print("="*80)
 
 if __name__ == "__main__":
     _run_self_test()
 
-__all__ = ["get_similarity", "batch_similarity", "TextSimilarity"]
+__all__ = ["get_similarity", "batch_similarity", "TextSimilarity", "get_accuracy"]

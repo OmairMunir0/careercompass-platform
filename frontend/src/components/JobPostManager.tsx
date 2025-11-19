@@ -16,6 +16,8 @@ export interface JobPostFormData {
   experienceLevel?: string;
   salaryMin: number;
   salaryMax: number;
+  requiredSkills?: string[];
+  applicationEmail?: string;
 }
 
 interface JobPost {
@@ -30,6 +32,8 @@ interface JobPost {
   salaryMax: number;
   isActive: boolean;
   createdAt: string;
+  requiredSkills?: { _id: string; name: string }[];
+  applicationEmail?: string | null;
 }
 
 export default function JobPostManager() {
@@ -70,6 +74,8 @@ export default function JobPostManager() {
       experienceLevel: "",
       salaryMin: 0,
       salaryMax: 0,
+      requiredSkills: [],
+      applicationEmail: "",
     });
     setIsDrawerOpen(true);
   };
@@ -85,6 +91,8 @@ export default function JobPostManager() {
       experienceLevel: job.experienceLevel?._id,
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
+      requiredSkills: (job.requiredSkills || []).map((s) => s._id),
+      applicationEmail: job.applicationEmail ?? "",
     });
     setIsDrawerOpen(true);
   };
@@ -206,6 +214,7 @@ function JobPostForm({ data, onSuccess, onCancel }: JobPostFormProps) {
   const [jobTypes, setJobTypes] = useState<{ _id: string; name: string }[]>([]);
   const [workModes, setWorkModes] = useState<{ _id: string; name: string }[]>([]);
   const [experienceLevels, setExperienceLevels] = useState<{ _id: string; name: string }[]>([]);
+  const [skills, setSkills] = useState<{ _id: string; name: string }[]>([]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -236,20 +245,27 @@ function JobPostForm({ data, onSuccess, onCancel }: JobPostFormProps) {
   useEffect(() => {
     const loadDropdowns = async () => {
       try {
-        const [types, modes, levels] = await Promise.all([
+        const [types, modes, levels, skillsRes] = await Promise.all([
           axiosInstance.get("/job-types"),
           axiosInstance.get("/work-modes"),
           axiosInstance.get("/experience-levels"),
+          axiosInstance.get("/skills"),
         ]);
         setJobTypes(types.data);
         setWorkModes(modes.data);
         setExperienceLevels(levels.data);
+        setSkills(skillsRes.data);
       } catch {
         toast.error("Failed to load job configuration data.");
       }
     };
     loadDropdowns();
   }, []);
+
+  const handleSkillsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const values = Array.from(e.target.selectedOptions).map((opt) => opt.value);
+    setForm((prev) => ({ ...prev, requiredSkills: values }));
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 w-[400px]">
@@ -273,6 +289,13 @@ function JobPostForm({ data, onSuccess, onCancel }: JobPostFormProps) {
         value={form.location ?? ""}
         onChange={handleChange}
         placeholder="Location"
+      />
+      <TextInput
+        name="applicationEmail"
+        value={form.applicationEmail ?? ""}
+        onChange={handleChange}
+        placeholder="Application Email (optional)"
+        type="email"
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         <div>
@@ -323,6 +346,23 @@ function JobPostForm({ data, onSuccess, onCancel }: JobPostFormProps) {
             ))}
           </select>
         </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Required Skills</label>
+        <select
+          name="requiredSkills"
+          multiple
+          value={form.requiredSkills ?? []}
+          onChange={handleSkillsChange}
+          className="border border-gray-300 rounded-md px-2 py-2 text-sm w-full mt-1 h-32"
+        >
+          {skills.map((s) => (
+            <option key={s._id} value={s._id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple skills</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <TextInput

@@ -45,6 +45,20 @@ interface Post {
   likes: number;
   comments: Comment[];
   createdAt: string;
+  type?: string;
+  jobPostId?: string;
+  jobMeta?: {
+    title?: string | null;
+    location?: string | null;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    jobType?: string | null;
+    workMode?: string | null;
+    experienceLevel?: string | null;
+    requiredSkills?: string[];
+    url?: string | null;
+    applicationEmail?: string | null;
+  };
 }
 
 const Timeline: React.FC = () => {
@@ -411,6 +425,8 @@ const Timeline: React.FC = () => {
                   createdAt={post.createdAt}
                   isLiked={!!likedPosts[post._id]}
                   currentUser={user as any}
+                  jobMeta={post.jobMeta as any}
+                  jobPostId={post.jobPostId}
                   onLike={toggleLike}
                   onComment={handleCommentSubmit}
                   onReply={handleReplySubmit}

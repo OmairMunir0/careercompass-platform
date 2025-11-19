@@ -4,6 +4,7 @@ import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import ShareModal from "./ShareModal";
+import Link from "next/link";
 
 interface User {
   _id: string;
@@ -31,15 +32,16 @@ interface Comment {
 
 interface JobMeta {
   _id?: string;
-  experienceLevel: String,
-  jobType: String,
-  location: String,
-  requiredSkills?: String[],
-  SalaryMax: Number,
-  SalaryMin: Number,
-  title: String,
-  url: String,
-  workMode: String,
+  experienceLevel?: string | null;
+  jobType?: string | null;
+  location?: string | null;
+  requiredSkills?: string[];
+  salaryMax?: number | null;
+  salaryMin?: number | null;
+  title?: string | null;
+  url?: string | null;
+  workMode?: string | null;
+  applicationEmail?: string | null;
 }
 
 interface TimelinePostProps {
@@ -71,6 +73,9 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
   createdAt,
   isLiked,
   currentUser,
+  jobMeta,
+  jobPostId,
+  type,
   onLike,
   onComment,
   onReply,
@@ -84,6 +89,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
   const [replyTexts, setReplyTexts] = useState<Record<string, string>>({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState<Record<string, boolean>>({});
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,8 +190,81 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
 
       {/* Post Content */}
       <div className="px-5 pb-4">
-        <p className="text-gray-800 whitespace-pre-wrap text-base leading-relaxed">{content}</p>
+        {(() => {
+          const MAX_CHARS = 300;
+          const isLong = typeof content === "string" && content.length > MAX_CHARS;
+          const display = !isLong || isExpanded ? content : `${content.slice(0, MAX_CHARS)}…`;
+          return (
+            <>
+              <p className="text-gray-800 whitespace-pre-wrap text-base leading-relaxed">{display}</p>
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded((v) => !v)}
+                  aria-expanded={isExpanded}
+                  className="mt-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:underline"
+                >
+                  {isExpanded ? "Show less" : "Show more"}
+                </button>
+              )}
+            </>
+          );
+        })()}
       </div>
+
+      {jobMeta && (
+        <div className="px-5 pb-4">
+          <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold text-purple-700">{jobMeta.title}</div>
+                <div className="text-sm text-gray-700">
+                  {(jobMeta.location || jobMeta.workMode || jobMeta.experienceLevel) && (
+                    <span>
+                      {[jobMeta.location, jobMeta.workMode, jobMeta.experienceLevel].filter(Boolean).join(" • ")}
+                    </span>
+                  )}
+                </div>
+                {(jobMeta.salaryMin != null || jobMeta.salaryMax != null) && (
+                  <div className="text-sm text-gray-700">
+                    {jobMeta.salaryMin != null && jobMeta.salaryMax != null
+                      ? `Salary: ${jobMeta.salaryMin} - ${jobMeta.salaryMax}`
+                      : jobMeta.salaryMin != null
+                      ? `Salary: ${jobMeta.salaryMin}`
+                      : jobMeta.salaryMax != null
+                      ? `Salary: ${jobMeta.salaryMax}`
+                      : ""}
+                  </div>
+                )}
+                {Array.isArray(jobMeta.requiredSkills) && jobMeta.requiredSkills.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {jobMeta.requiredSkills.slice(0, 6).map((s, i) => (
+                      <span key={`${s}-${i}`} className="px-2 py-1 bg-white border border-purple-200 text-purple-700 rounded text-xs">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {jobMeta.url && (
+                  <Link href={jobMeta.url} className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                    View Job
+                  </Link>
+                )}
+                {jobMeta.applicationEmail && (
+                  <a
+                    href={`mailto:${jobMeta.applicationEmail}?subject=${encodeURIComponent("Application for " + (jobMeta.title || "Job"))}`}
+                    className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900"
+                  >
+                    Apply via Email
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Post Image */}
       {imageUrl && (

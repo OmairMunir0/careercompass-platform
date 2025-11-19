@@ -26,6 +26,7 @@ export const createJobPost = async (req: Request, res: Response) => {
       salaryMin,
       salaryMax,
       requiredSkills,
+      applicationEmail,
     } = req.body;
 
     if (!title || !description || !salaryMin || !salaryMax)
@@ -42,6 +43,7 @@ export const createJobPost = async (req: Request, res: Response) => {
       salaryMin,
       salaryMax,
       requiredSkills: requiredSkills || [],
+      applicationEmail: applicationEmail?.trim() || null,
     });
 
     await job.save();
@@ -60,11 +62,12 @@ export const createJobPost = async (req: Request, res: Response) => {
 
       const content = [
         `New Job: ${title}`,
-        location ? `Location: ${location}` : null,
-        `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
-        `Salary: ${salaryMin} - ${salaryMax}`,
-        skillsText ? `Skills: ${skillsText}` : null,
-        `View Job: ${viewUrl}`,
+        // location ? `Location: ${location}` : null,
+        // `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
+        // `Salary: ${salaryMin} - ${salaryMax}`,
+        // skillsText ? `Skills: ${skillsText}` : null,
+        // applicationEmail ? `Apply via Email: ${applicationEmail}` : null,
+        `Description: ${description}`, 
       ].filter(Boolean).join("\n");
 
       const timelinePost = await Post.create({
@@ -83,6 +86,7 @@ export const createJobPost = async (req: Request, res: Response) => {
           experienceLevel: exp?.name ?? null,
           requiredSkills: skills.map((s: any) => s.name),
           url: viewUrl,
+          applicationEmail: applicationEmail ?? null,
         },
       });
 
@@ -366,6 +370,7 @@ export const updateJobPost = async (req: Request, res: Response) => {
           `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
           `Salary: ${job.salaryMin} - ${job.salaryMax}`,
           skillsText ? `Skills: ${skillsText}` : null,
+          job.applicationEmail ? `Apply via Email: ${job.applicationEmail}` : null,
         ].filter(Boolean).join("\n");
 
         await Post.findByIdAndUpdate(job.timelinePostId, {
@@ -380,6 +385,7 @@ export const updateJobPost = async (req: Request, res: Response) => {
             experienceLevel: exp?.name ?? null,
             requiredSkills: skills.map((s: any) => s.name),
             url: viewUrl,
+            applicationEmail: job.applicationEmail ?? null,
           },
         });
       }

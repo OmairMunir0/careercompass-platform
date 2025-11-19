@@ -22,6 +22,7 @@ interface Job {
   experienceLevel?: { id: string; name: string };
   workMode?: { id: string; name: string };
   isRemote?: boolean;
+  applicationEmail?: string | null;
 }
 
 const JobDetail = () => {
@@ -65,6 +66,7 @@ const JobDetail = () => {
         workMode: data.workMode ? { id: data.workMode._id, name: data.workMode.name } : undefined,
         isSaved: !!data.isSaved,
         hasApplied: !!data.hasApplied,
+        applicationEmail: data.applicationEmail ?? null,
       };
 
       setJob(mapped);
@@ -210,20 +212,31 @@ const JobDetail = () => {
           </div>
 
           {user && (
-            <div className="mt-6">
+            <div className="mt-6 flex gap-3">
               {hasApplied ? (
                 <div className="flex items-center gap-2 px-5 py-3 bg-green-100 text-green-800 rounded-md">
                   <CheckCircle className="w-5 h-5" />
                   <span>Application Submitted</span>
                 </div>
               ) : (
-                <button
-                  onClick={() => setDrawerOpen(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                >
-                  <Send className="w-5 h-5" />
-                  Apply Now
-                </button>
+                <>
+                  <button
+                    onClick={() => setDrawerOpen(true)}
+                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                  >
+                    <Send className="w-5 h-5" />
+                    Apply Now
+                  </button>
+                  {job.applicationEmail && (
+                    <a
+                      href={`mailto:${job.applicationEmail}?subject=${encodeURIComponent("Application for " + job.title)}`}
+                      className="flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-900"
+                    >
+                      <Send className="w-5 h-5" />
+                      Apply via Email
+                    </a>
+                  )}
+                </>
               )}
             </div>
           )}

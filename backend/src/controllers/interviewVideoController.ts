@@ -31,7 +31,7 @@ export const uploadInterviewVideo = async (req: any, res: Response) => {
       knownLength: file.size,
     });
 
-    const response = await axios.post(`http://127.0.0.1:8000/api/interview_video/upload?categoryId=${encodeURIComponent(categoryId)}&questions=${encodedQuestions}`, formData, {
+    const response = await axios.post(`${process.env.FASTAPI_BASE_URL || 'http://127.0.0.1:8000'}/api/interview_video/upload?categoryId=${encodeURIComponent(categoryId)}&questions=${encodedQuestions}`, formData, {
       headers: {
         ...formData.getHeaders(),
       },

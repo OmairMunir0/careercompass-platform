@@ -12,6 +12,7 @@ export interface IJobPost extends Document {
   salaryMax: number;
   isActive: boolean;
   requiredSkills: Types.ObjectId[];
+  applicationEmail?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const JobPostSchema = new Schema<IJobPost>(
     salaryMax: { type: Number, required: true },
     isActive: { type: Boolean, default: true },
     requiredSkills: [{ type: Schema.Types.ObjectId, ref: "Skill" }],
+    applicationEmail: { type: String, default: null },
   },
   { timestamps: true }
 );

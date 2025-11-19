@@ -1,50 +1,45 @@
+# app/utils/analysis.py   ← REPLACE YOUR WHOLE FILE WITH THIS
+
 from __future__ import annotations
-from fastapi import UploadFile
 import os
-from dotenv import load_dotenv
-import openai
 import tempfile
-from pathlib import Path
 import subprocess
-import math
-from typing import List, Tuple, Dict
-import uuid
-import whisper 
+from pathlib import Path
+from typing import List, Tuple
+import whisper
+from dotenv import load_dotenv
 
 load_dotenv()
+
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads/videos")
 BASE_URL = os.getenv("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
-ANSWER_TIME = os.getenv("ANSWER_TIME", 40)
-whisper_model = whisper.load_model("base")
+ANSWER_TIME = int(os.getenv("ANSWER_TIME", "40"))
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Lazy loading for Whisper model (only loads when needed)
+# GLOBAL WHISPER MODEL — THIS IS THE KEY
 _whisper_model = None
 
 def get_whisper_model():
-    """Load Whisper model lazily - only when actually needed for transcription."""
+    """Load Whisper 'base' model ONCE at startup (called from lifespan)"""
     global _whisper_model
     if _whisper_model is None:
-        print("[Whisper] Loading model (this may take a moment and download if first time)...")
+        print("[Whisper] Loading 'base' model... (this takes ~10–20 seconds once)")
         _whisper_model = whisper.load_model("base")
-        print("[Whisper] Model loaded successfully")
+        print("[Whisper] Model loaded and ready for transcription! 🎤")
     return _whisper_model
 
-
-# === MODULE 1: Save uploaded video ===
-def save_uploaded_video(file: UploadFile) -> str:
+# === 1. Save uploaded video ===
+def save_uploaded_video(file) -> str:
     file_location = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_location, "wb") as f:
         content = file.file.read()
         f.write(content)
     return file_location
 
-
-# === MODULE 2: Extract audio to temp WAV ===
+# === 2. Extract audio to temp MP3 (smaller & faster) ===
 def extract_audio_to_wav(video_path: str) -> str:
     video_path = str(Path(video_path).resolve())
-
-    # Create a temporary MP3 file
     tmp_mp3 = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tmp_mp3_path = tmp_mp3.name
     tmp_mp3.close()
@@ -52,60 +47,57 @@ def extract_audio_to_wav(video_path: str) -> str:
     ffmpeg_cmd = [
         "ffmpeg",
         "-i", video_path,
-        "-vn",                   
+        "-vn",
         "-acodec", "libmp3lame",
         "-ab", "192k",
         "-ar", "44100",
-        "-y",                   
+        "-y",
         tmp_mp3_path
     ]
 
     try:
         subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
-        print(f"[FFmpeg] Audio extracted: {tmp_mp3_path}")
+        print(f"[FFmpeg] Audio extracted → {tmp_mp3_path}")
     except subprocess.CalledProcessError as e:
-        print(f"FFmpeg error: {e.stderr.decode() if e.stderr else 'No stderr'}")
-        raise
+        error = e.stderr.decode() if e.stderr else "Unknown FFmpeg error"
+        raise RuntimeError(f"FFmpeg failed: {error}")
     except FileNotFoundError:
-        raise RuntimeError("FFmpeg not installed or not found in PATH")
+        raise RuntimeError("FFmpeg not found! Install it on the server.")
 
     return tmp_mp3_path
 
-
-# === MODULE 3: Transcribe with timestamps + split into 40-sec chunks ===
+# === 3. Transcribe + Split into 40-second chunks ===
 def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -> Tuple[str, List[str]]:
     if not os.path.exists(audio_path):
-        raise FileNotFoundError(f"Audio not found: {audio_path}")
+        raise FileNotFoundError(f"Audio file not found: {audio_path}")
+    
+    segment_duration = float(segment_duration)
 
-    model = get_whisper_model()  # Lazy load model only when needed
-    result = model.transcribe(
-        audio_path,
-        word_timestamps=True,
-    )
+    model = get_whisper_model()  # ← uses pre-loaded global model (instant)
 
+    print("[Whisper] Starting transcription...")
+    result = model.transcribe(audio_path, word_timestamps=True)
     full_transcript = result["text"].strip()
-    segments = result["segments"]
 
+    segments = result["segments"]
     num_chunks = 10
     chunks = [""] * num_chunks
 
-    segment_duration = float(segment_duration)
-
     for seg in segments:
-        start = float(seg["start"]) 
+        start = float(seg["start"])
         text = seg["text"].strip()
-
         bucket_idx = min(int(start // segment_duration), num_chunks - 1)
         chunks[bucket_idx] += " " + text
 
     chunks = [c.strip() or "[silent]" for c in chunks]
+    print(f"[Whisper] Transcription complete → {len(chunks)} chunks")
+
     return full_transcript, chunks
 
-
-# === MODULE 4: Clean up temp file ===
+# === 4. Clean up temp files ===
 def cleanup_temp_file(path: str) -> None:
     if path and os.path.exists(path):
         try:
             os.unlink(path)
         except Exception as e:
-            print(f"Warning: Failed to delete {path}: {e}")
+            print(f"[Cleanup] Failed to delete {path}: {e}")
