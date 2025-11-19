@@ -246,9 +246,9 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 {jobMeta.url && (
-                  <Link href={jobMeta.url} className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                  <Link href={jobMeta.url} className="px-4 py-2 bg-purple-600 text-center text-white rounded-md hover:bg-purple-700">
                     View Job
                   </Link>
                 )}

@@ -18,6 +18,7 @@ export interface IUser extends Document {
   position: string | null;
   imageUrl: string | null;
   resumeUrl: string | null;
+  preferredLocations: string[];
   subscriptionTier: "free" | "premium";
   subscriptionStatus: "inactive" | "active" | "expired" | "canceled";
   premiumExpiresAt: Date | null;
@@ -49,6 +50,7 @@ export const UserSchema = new Schema<IUser>(
     position: { type: String, default: null },
     imageUrl: { type: String, default: null },
     resumeUrl: { type: String, default: null },
+    preferredLocations: { type: [String], default: ["Remote"], index: true },
     subscriptionTier: { type: String, enum: ["free", "premium"], default: "free" },
     subscriptionStatus: {
       type: String,

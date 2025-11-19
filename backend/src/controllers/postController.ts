@@ -10,6 +10,7 @@ import {
 } from "../utils/subscription";
 import { getCached, setCached, CACHE_TTL, invalidateCache } from "../utils/cache";
 import { createNotification } from "../utils/notifications";
+import axios from "axios";
 
 /**
  * @desc Create a new post
@@ -64,7 +65,10 @@ export const createPost = async (req: Request, res: Response) => {
  */
 export const getAllPosts = async (req: Request, res: Response) => {
   try {
-    const cacheKey = req.user ? `posts:all:user:${req.user.id}` : "posts:all";
+    const userId = req.user?.id || req.query.userId;
+    const cacheKey = userId ? `posts:all:user:${userId}` : "posts:all";
+
+    console.log(userId);
     
     // Try to get from cache
     const cached = await getCached(cacheKey);
@@ -84,6 +88,22 @@ export const getAllPosts = async (req: Request, res: Response) => {
       })
       .sort({ createdAt: -1 })
       .lean();
+      
+    const fastapiBase = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+    let recommendedJobs: any = null;
+    try {
+      if (userId) {
+        const params = new URLSearchParams();
+        params.set("user_id", userId);
+        const url = `${fastapiBase}/api/timeline/job_posts?${params.toString()}`;
+        console.log(url)
+        const response = await axios.get(url);
+        recommendedJobs = response.data;
+        console.log("Recommended Job Posts from FastAPI:", recommendedJobs);
+      }
+    } catch (e: any) {
+      console.error("FastAPI timeline error:", e?.response?.data || e?.message);
+    }
 
     // Handle backward compatibility: likes can be number (old) or array (new)
     // Add isLiked flag for authenticated users

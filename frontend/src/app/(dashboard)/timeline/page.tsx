@@ -85,12 +85,13 @@ const Timeline: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
+    console.log(user);
   }, []);
 
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/posts");
+      const res = await axiosInstance.get(`/posts?${user._id ? `userId=${user._id}` : ""}`);
       // Map imageUrl to profileImage for compatibility
       const postsWithProfileImages = res.data.map((post: Post & { isLiked?: boolean }) => ({
         ...post,

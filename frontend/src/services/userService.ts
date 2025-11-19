@@ -15,6 +15,7 @@ export interface IUser {
   phone: string | null;
   linkedinUrl: string | null;
   portfolioUrl: string | null;
+  preferredLocations: string[];
   companyName: string | null;
   companyWebsite: string | null;
   position: string | null;
@@ -43,6 +44,7 @@ export interface ISafeUser {
   phone: string | null;
   linkedinUrl: string | null;
   portfolioUrl: string | null;
+  preferredLocations: string[];
   companyName: string | null;
   companyWebsite: string | null;
   position: string | null;
@@ -75,6 +77,7 @@ export type UpdateMeDto = Partial<
     | "companyWebsite"
     | "position"
     | "imageUrl"
+    | "preferredLocations"
   >
 >;
 

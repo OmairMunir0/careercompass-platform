@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import interview_video
+from app.routes import interview_video, timeline_job_posts
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio
@@ -29,4 +29,5 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(interview_video.router, prefix="/api/interview_video")
+app.include_router(timeline_job_posts.router, prefix="/api/timeline")
 app.mount("/videos", StaticFiles(directory="uploads/videos"), name="videos")

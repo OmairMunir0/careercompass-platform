@@ -1,3 +1,5 @@
+# app/utils/job_post_score.py
+
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -7,9 +9,9 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-
 AI_MODEL = os.getenv("AI_REC_MODEL_NAME", "all-MiniLM-L6-v2")
 
+# Global model — loaded once in lifespan
 rec_model = None
 
 def load_rec_model():
@@ -17,46 +19,74 @@ def load_rec_model():
     print("[JobPostScore] Loading recommendation model...")
     rec_model = SentenceTransformer(AI_MODEL)
     print("[JobPostScore] Model loaded successfully!")
-    return rec_model  
 
 class RecommendedJob(BaseModel):
     jobId: str
     title: str
-    company: str
     location: str
     workMode: str
     salaryMin: int
     salaryMax: int
-    matchScore: int              
-    matchingSkills: List[str]      
-    description: Optional[str] = None
+    matchScore: int
+    matchingSkills: List[str]
+    description: Optional[str] = None  # short preview
+
+# FINAL TEXT BUILDERS – Matches your Colab EXACTLY
+_user_text_template = """
+{position} - {level} ({years} years experience)
+bio: {bio}
+skills: {skills}
+location: {location}
+prefers locations: {locations}
+""".strip()
+
+_job_text_template = """
+{title}
+location: {location} | work mode: {workMode} | salary: €{salary}k
+required skills: {skills}
+job description: {description}
+""".strip()
 
 def build_user_text(user: Dict[Any, Any]) -> str:
-    return f"""
-    {user.get('position', '')} with {user.get('yearsExperience', 0)} years experience
-    skills: {', '.join(user.get('skills', []))}
-    location: {user.get('location', '')}
-    prefers: {', '.join(user.get('preferredLocations', [])), user.get('preferredWorkMode', '')}
-    """.strip().lower()
+    skills = ', '.join(user.get('skills', []))
+    locations = ', '.join(user.get('preferredLocations', []))
+    bio = user.get('bio', '') or 'No bio'
+    
+    return _user_text_template.format(
+        position=user.get('position', 'Professional'),
+        level=user.get('experienceLevel', 'Mid-Level'),
+        years=user.get('yearsExperience', 0),
+        bio=bio,
+        skills=skills,
+        location=user.get('location', 'Anywhere'),
+        locations=locations or 'Anywhere'
+    ).lower()
 
 def build_job_text(job: Dict[Any, Any]) -> str:
-    all_skills = job.get('requiredSkills', [])
-    return f"""
-    {job.get('title', '')} at {job.get('company', '')}
-    location: {job.get('location', '')} | work mode: {job.get('workMode', '')} | salary: €{job.get('salaryMin',0)//1000}k–€{job.get('salaryMax',0)//1000}k
-    skills: {', '.join(all_skills)}
-    job description: {job.get('description', '')}
-    """.strip().lower()
+    skills = ', '.join(job.get('requiredSkills', []))
+    salary_min = job.get('salaryMin', 0) // 1000
+    salary_max = job.get('salaryMax', 0) // 1000
+    salary = f"{salary_min}–{salary_max}" if salary_max else f"{salary_min}+"
+
+    return _job_text_template.format(
+        title=job.get('title', ''),
+        location=job.get('location', 'Anywhere'),
+        workMode=job.get('workMode', 'flexible'),
+        salary=salary,
+        skills=skills,
+        description=job.get('description', '')[:500]  # truncate long desc
+    ).lower()
 
 def get_recommended_jobs_for_user(
     user: Dict[Any, Any],
     jobposts: List[Dict[Any, Any]],
     min_score: float = 0.40
 ) -> List[RecommendedJob]:
-    """
-    Returns jobs sorted by relevance for the given user.
-    Only jobs with cosine similarity >= 0.40 are included.
-    """
+
+    global rec_model
+    if rec_model is None:
+        raise RuntimeError("Recommendation model not loaded!")
+
     if not jobposts:
         return []
 
@@ -66,10 +96,9 @@ def get_recommended_jobs_for_user(
     job_texts = [build_job_text(job) for job in jobposts]
     job_embeddings = rec_model.encode(job_texts)
 
-    print("user text:", user_text)
-    print("\njob texts:", job_texts)
+    print("User Text:", user_text)
+    print("Job Texts:", job_texts)
 
-    # Cosine similarity
     similarities = cosine_similarity(user_embedding, job_embeddings)[0]
 
     results = []
@@ -79,23 +108,22 @@ def get_recommended_jobs_for_user(
         if score < min_score:
             continue
 
-        # Find common skills (case-insensitive)
-        job_all_skills = job.get('requiredSkills', [])
-        common = [s for s in job_all_skills if s.lower() in user_skills_lower]
+        job_skills = job.get('requiredSkills', [])
+        common = [s for s in job_skills if s.lower() in user_skills_lower]
 
         results.append({
             "jobId": str(job['_id']),
-            "title": job.get('title'),
-            "company": job.get('company'),
-            "location": job.get('location'),
-            "workMode": job.get('workMode'),
-            "salaryMin": job.get('salaryMin'),
-            "salaryMax": job.get('salaryMax'),
-            "matchScore": int(round(score * 100)),  # 0–100
-            "matchingSkills": common
+            "title": job['title'],
+            "location": job.get('location', 'Anywhere'),
+            "workMode": job.get('workMode', 'flexible'),
+            "salaryMin": job.get('salaryMin', 0),
+            "salaryMax": job.get('salaryMax', 0),
+            "matchScore": int(round(score * 100)),
+            "matchingSkills": common,
+            "description": job.get('description', '')[:300] + "..." if job.get('description') else None
         })
 
-    # Sort highest → lowest score
+    # Sort best first
     results.sort(key=lambda x: x['matchScore'], reverse=True)
 
     return [RecommendedJob(**r) for r in results]

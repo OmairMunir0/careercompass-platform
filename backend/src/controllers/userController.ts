@@ -58,6 +58,23 @@ export const updateMe = async (req: Request, res: Response) => {
     // Prevent changes to sensitive fields
     const { passwordHash, roleId, ...updates } = req.body;
 
+    if (updates.preferredLocations) {
+      const raw = Array.isArray(updates.preferredLocations)
+        ? updates.preferredLocations
+        : String(updates.preferredLocations).split(",");
+      const cleaned = Array.from(
+        new Set(
+          raw
+            .map((s: any) => String(s).trim())
+            .filter((s: string) => Boolean(s))
+            .concat("Remote")
+        )
+      );
+      // Ensure Remote is present and cannot be removed
+      if (!cleaned.includes("Remote")) cleaned.unshift("Remote");
+      updates.preferredLocations = cleaned;
+    }
+
     const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -251,6 +268,22 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const updates = { ...req.body };
     delete updates.passwordHash;
+
+    if (updates.preferredLocations) {
+      const raw = Array.isArray(updates.preferredLocations)
+        ? updates.preferredLocations
+        : String(updates.preferredLocations).split(",");
+      const cleaned = Array.from(
+        new Set(
+          raw
+            .map((s: any) => String(s).trim())
+            .filter((s: string) => Boolean(s))
+            .concat("Remote")
+        )
+      );
+      if (!cleaned.includes("Remote")) cleaned.unshift("Remote");
+      updates.preferredLocations = cleaned;
+    }
 
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });

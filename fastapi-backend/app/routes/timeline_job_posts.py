@@ -9,6 +9,7 @@ import urllib.parse
 from ..utils.job_post_score import get_recommended_jobs_for_user, RecommendedJob
 from dotenv import load_dotenv
 from ..db.job_posts import get_job_posts, get_db
+from ..db.user_info import get_user_info
 
 load_dotenv()  
 
@@ -23,21 +24,31 @@ router = APIRouter()
 # model = SentenceTransformer(MODEL)
 
 
-@router.get("/recommended-jobs", response_model=List[RecommendedJob])
-async def get_recommended():
+@router.get("/job_posts") #, response_model=List[RecommendedJob] in bracket
+async def get_recommended(user_id: str = Query(...)):
+    
+    print(user_id)
     
     # 1. Fetch JobPosts from MongoDB
     jobposts = get_job_posts()
     
     # 2. Extract user attributes
-    user = {
+    user = get_user_info(user_id)
+    
+    dummy = {
         "position": "Software Engineer",
-        "yearsExperience": 3,
+        "bio": "Experienced in backend development and AI integration.",
         "skills": ["Python", "FastAPI", "MongoDB", "Machine Learning"],
         "location": "Berlin, Germany",
-        "preferredLocations": ["Remote", "Berlin"],
-        "preferredWorkMode": "Remote"
+        "preferredLocations": ["Remote"],
+        "yearsExperience" : 3,  #endDate.year - startDate.year (from experience user profile)
+        "experienceLevel": "Mid-Level",  #endDate.year - startDate.year (from experience user profile)
     }
 
-    recommended = get_recommended_jobs_for_user(user, jobposts)
-    return recommended
+    # recommended = get_recommended_jobs_for_user(dummy, jobposts)
+    
+    # print("Recommended Jobs:", recommended)
+    
+    # return recommended
+    
+    return dummy
