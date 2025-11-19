@@ -403,6 +403,7 @@ const Timeline: React.FC = () => {
                   key={post._id}
                   id={post._id}
                   user={post.user}
+                  type={post.type}
                   content={post.content}
                   imageUrl={post.imageUrl}
                   likes={post.likes}

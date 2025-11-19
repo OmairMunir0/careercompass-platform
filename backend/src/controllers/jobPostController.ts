@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { JobApplication, SavedJob } from "../models";
+import { JobApplication, SavedJob, Post, JobType, WorkMode, ExperienceLevel, Skill } from "../models";
 import { IJobPost, JobPost } from "../models/JobPost";
 import { UserSkill } from "../models/UserSkill";
 import { User } from "../models/User";
@@ -45,6 +45,52 @@ export const createJobPost = async (req: Request, res: Response) => {
     });
 
     await job.save();
+
+    try {
+      const baseUrl = process.env.FRONTEND_URL || process.env.APP_BASE_URL || "http://localhost:3000";
+      const jt = jobType ? await JobType.findById(jobType).lean() : null;
+      const wm = workMode ? await WorkMode.findById(workMode).lean() : null;
+      const exp = experienceLevel ? await ExperienceLevel.findById(experienceLevel).lean() : null;
+      const skills = requiredSkills && Array.isArray(requiredSkills) && requiredSkills.length > 0
+        ? await Skill.find({ _id: { $in: requiredSkills } }).lean()
+        : [];
+
+      const skillsText = skills.map((s: any) => s.name).join(", ");
+      const viewUrl = `${baseUrl}/find-jobs/${job._id}`;
+
+      const content = [
+        `New Job: ${title}`,
+        location ? `Location: ${location}` : null,
+        `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
+        `Salary: ${salaryMin} - ${salaryMax}`,
+        skillsText ? `Skills: ${skillsText}` : null,
+        `View Job: ${viewUrl}`,
+      ].filter(Boolean).join("\n");
+
+      const timelinePost = await Post.create({
+        user: req.user.id,
+        content,
+        imageUrl: null,
+        type: "job",
+        jobPostId: job._id,
+        jobMeta: {
+          title,
+          location: location ?? null,
+          salaryMin,
+          salaryMax,
+          jobType: jt?.name ?? null,
+          workMode: wm?.name ?? null,
+          experienceLevel: exp?.name ?? null,
+          requiredSkills: skills.map((s: any) => s.name),
+          url: viewUrl,
+        },
+      });
+
+      job.timelinePostId = timelinePost._id as any;
+      await job.save();
+    } catch (postErr) {
+      console.error("Failed to create timeline post for job:", postErr);
+    }
 
     // Notify Premium users whose skills match the job requirements
     if (requiredSkills && Array.isArray(requiredSkills) && requiredSkills.length > 0) {
@@ -239,7 +285,7 @@ export const getMyJobPosts = async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
     const jobs = await JobPost.find({ recruiter: req.user.id })
-      .populate("jobType workMode experienceLevel")
+      .populate("jobType workMode experienceLevel requiredSkills")
       .sort({ createdAt: -1 });
 
     res.status(200).json(jobs);
@@ -302,6 +348,45 @@ export const updateJobPost = async (req: Request, res: Response) => {
 
     if (!job) return res.status(404).json({ message: "Job post not found or unauthorized" });
 
+    try {
+      if (job.timelinePostId) {
+        const baseUrl = process.env.FRONTEND_URL || process.env.APP_BASE_URL || "http://localhost:3000";
+        const jt = job.jobType ? await JobType.findById(job.jobType).lean() : null;
+        const wm = job.workMode ? await WorkMode.findById(job.workMode).lean() : null;
+        const exp = job.experienceLevel ? await ExperienceLevel.findById(job.experienceLevel).lean() : null;
+        const skills = job.requiredSkills?.length
+          ? await Skill.find({ _id: { $in: job.requiredSkills } }).lean()
+          : [];
+        const skillsText = skills.map((s: any) => s.name).join(", ");
+        const viewUrl = `${baseUrl}/find-jobs/${job._id}`;
+
+        const content = [
+          `Updated Job: ${job.title}`,
+          job.location ? `Location: ${job.location}` : null,
+          `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
+          `Salary: ${job.salaryMin} - ${job.salaryMax}`,
+          skillsText ? `Skills: ${skillsText}` : null,
+        ].filter(Boolean).join("\n");
+
+        await Post.findByIdAndUpdate(job.timelinePostId, {
+          content,
+          jobMeta: {
+            title: job.title,
+            location: job.location ?? null,
+            salaryMin: job.salaryMin,
+            salaryMax: job.salaryMax,
+            jobType: jt?.name ?? null,
+            workMode: wm?.name ?? null,
+            experienceLevel: exp?.name ?? null,
+            requiredSkills: skills.map((s: any) => s.name),
+            url: viewUrl,
+          },
+        });
+      }
+    } catch (postErr) {
+      console.error("Failed to update timeline post for job:", postErr);
+    }
+
     res.status(200).json(job);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -346,6 +431,14 @@ export const deleteJobPost = async (req: Request, res: Response) => {
     });
 
     if (!deleted) return res.status(404).json({ message: "Job post not found or unauthorized" });
+
+    try {
+      if (deleted.timelinePostId) {
+        await Post.findByIdAndDelete(deleted.timelinePostId);
+      }
+    } catch (postErr) {
+      console.error("Failed to delete timeline post for job:", postErr);
+    }
 
     res.status(200).json({ message: "Job post deleted successfully" });
   } catch (err: any) {

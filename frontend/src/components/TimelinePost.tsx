@@ -29,6 +29,19 @@ interface Comment {
   createdAt?: string;
 }
 
+interface JobMeta {
+  _id?: string;
+  experienceLevel: String,
+  jobType: String,
+  location: String,
+  requiredSkills?: String[],
+  SalaryMax: Number,
+  SalaryMin: Number,
+  title: String,
+  url: String,
+  workMode: String,
+}
+
 interface TimelinePostProps {
   id: string;
   user: User;
@@ -39,6 +52,9 @@ interface TimelinePostProps {
   createdAt: string;
   isLiked: boolean;
   currentUser: User | null;
+  jobMeta?: JobMeta;
+  jobPostId?: string;
+  type?: string;
   onLike: (postId: string) => void;
   onComment: (postId: string, content: string) => void;
   onReply: (postId: string, commentId: string, content: string) => void;
