@@ -96,10 +96,9 @@ export const getAllPosts = async (req: Request, res: Response) => {
         const params = new URLSearchParams();
         params.set("user_id", userId);
         const url = `${fastapiBase}/api/timeline/job_posts?${params.toString()}`;
-        console.log(url)
         const response = await axios.get(url);
         recommendedJobs = response.data;
-        console.log("Recommended Job Posts from FastAPI:", recommendedJobs);
+        console.log(recommendedJobs);
       }
     } catch (e: any) {
       console.error("FastAPI timeline error:", e?.response?.data || e?.message);

@@ -4,11 +4,9 @@ import os
 from typing import Dict, List
 from sentence_transformers import SentenceTransformer
 import openai
-import json
-import urllib.parse
-from ..utils.job_post_score import get_recommended_jobs_for_user, RecommendedJob
+from ..utils.job_post_score import get_recommended_jobs_for_user
 from dotenv import load_dotenv
-from ..db.job_posts import get_job_posts, get_db
+from ..db.job_posts import get_job_posts, get_db, get_normal_job_posts
 from ..db.user_info import get_user_info
 
 load_dotenv()  
@@ -21,34 +19,22 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter()
-# model = SentenceTransformer(MODEL)
 
-
-@router.get("/job_posts") #, response_model=List[RecommendedJob] in bracket
+@router.get("/job_posts")
 async def get_recommended(user_id: str = Query(...)):
-    
-    print(user_id)
-    
+        
     # 1. Fetch JobPosts from MongoDB
     jobposts = get_job_posts()
     
     # 2. Extract user attributes
     user = get_user_info(user_id)
-    
-    dummy = {
-        "position": "Software Engineer",
-        "bio": "Experienced in backend development and AI integration.",
-        "skills": ["Python", "FastAPI", "MongoDB", "Machine Learning"],
-        "location": "Berlin, Germany",
-        "preferredLocations": ["Remote"],
-        "yearsExperience" : 3,  #endDate.year - startDate.year (from experience user profile)
-        "experienceLevel": "Mid-Level",  #endDate.year - startDate.year (from experience user profile)
-    }
 
-    # recommended = get_recommended_jobs_for_user(dummy, jobposts)
+    # 3. Get recommended jobs
+    recommended = get_recommended_jobs_for_user(user, jobposts)
+    print("Recommended Jobs:", recommended)
     
-    # print("Recommended Jobs:", recommended)
+    # 4. Convert recommended jobs to normal job post format
+    converted_normal_posts = get_normal_job_posts(recommended)
+    print("Converted Normal Posts:", converted_normal_posts)
     
-    # return recommended
-    
-    return dummy
+    return recommended

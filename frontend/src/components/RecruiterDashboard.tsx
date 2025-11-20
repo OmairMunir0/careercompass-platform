@@ -3,6 +3,7 @@
 import { useAuthStore } from "@/store/authStore";
 import { BarChart3, Briefcase, LucideIcon, MessageSquare, User, Users } from "lucide-react";
 import Link from "next/link";
+import ContactSection from "@/components/ContactSection";
 
 interface StatCard {
   label: string;
@@ -120,6 +121,9 @@ const RecruiterDashboard = () => {
           </Link>
         ))}
       </div>
+
+      {/* Contact + Map */}
+      <ContactSection />
     </div>
   );
 };

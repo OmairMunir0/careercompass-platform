@@ -4,7 +4,6 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 
@@ -19,17 +18,6 @@ def load_rec_model():
     print("[JobPostScore] Loading recommendation model...")
     rec_model = SentenceTransformer(AI_MODEL)
     print("[JobPostScore] Model loaded successfully!")
-
-class RecommendedJob(BaseModel):
-    jobId: str
-    title: str
-    location: str
-    workMode: str
-    salaryMin: int
-    salaryMax: int
-    matchScore: int
-    matchingSkills: List[str]
-    description: Optional[str] = None  # short preview
 
 # FINAL TEXT BUILDERS – Matches your Colab EXACTLY
 _user_text_template = """
@@ -74,14 +62,14 @@ def build_job_text(job: Dict[Any, Any]) -> str:
         workMode=job.get('workMode', 'flexible'),
         salary=salary,
         skills=skills,
-        description=job.get('description', '')[:500]  # truncate long desc
+        description=job.get('description', '')[:400]
     ).lower()
 
 def get_recommended_jobs_for_user(
     user: Dict[Any, Any],
     jobposts: List[Dict[Any, Any]],
     min_score: float = 0.40
-) -> List[RecommendedJob]:
+) -> List[Dict[str, Any]]:
 
     global rec_model
     if rec_model is None:
@@ -96,9 +84,6 @@ def get_recommended_jobs_for_user(
     job_texts = [build_job_text(job) for job in jobposts]
     job_embeddings = rec_model.encode(job_texts)
 
-    print("User Text:", user_text)
-    print("Job Texts:", job_texts)
-
     similarities = cosine_similarity(user_embedding, job_embeddings)[0]
 
     results = []
@@ -112,18 +97,11 @@ def get_recommended_jobs_for_user(
         common = [s for s in job_skills if s.lower() in user_skills_lower]
 
         results.append({
-            "jobId": str(job['_id']),
-            "title": job['title'],
-            "location": job.get('location', 'Anywhere'),
-            "workMode": job.get('workMode', 'flexible'),
-            "salaryMin": job.get('salaryMin', 0),
-            "salaryMax": job.get('salaryMax', 0),
+            "jobId": str(job["_id"]),
             "matchScore": int(round(score * 100)),
             "matchingSkills": common,
-            "description": job.get('description', '')[:300] + "..." if job.get('description') else None
         })
 
-    # Sort best first
-    results.sort(key=lambda x: x['matchScore'], reverse=True)
+    results.sort(key=lambda x: x["matchScore"], reverse=True)
 
-    return [RecommendedJob(**r) for r in results]
+    return results

@@ -94,7 +94,6 @@ def get_user_info(userId: str = None):
                 "yearsExperience": years_experience, # Updated calculation
                 "experienceLevel": experienceLevel,
             }
-    print(user)
             
     return user 
 
