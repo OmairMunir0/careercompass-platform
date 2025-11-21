@@ -73,9 +73,14 @@ const Timeline: React.FC = () => {
   const isPremiumPlan = Boolean((user as any)?.isPremiumActive);
   const characterLimit = isPremiumPlan ? 2500 : 250;
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+
   // Initialize web push for Premium users
   const { subscribe } = useWebPush();
-  
+
   useEffect(() => {
     if (isPremiumPlan) {
       // Request push notification permission and subscribe
@@ -84,55 +89,75 @@ const Timeline: React.FC = () => {
   }, [isPremiumPlan, subscribe]);
 
   useEffect(() => {
-    fetchPosts();
-    console.log(user);
+    fetchPosts(1);
   }, []);
 
-  const fetchPosts = async () => {
-    setLoading(true);
+  const fetchPosts = async (pageNumber = 1) => {
+    if (!hasMore && pageNumber !== 1) return;
     try {
-      const res = await axiosInstance.get(`/posts?${user._id ? `userId=${user._id}` : ""}`);
-      // Map imageUrl to profileImage for compatibility
-      const postsWithProfileImages = res.data.map((post: Post & { isLiked?: boolean }) => ({
+      if (pageNumber === 1) setLoading(true);
+
+      const res = await axiosInstance.get(
+        `/posts?${user._id ? `userId=${user._id}` : ""}&page=${pageNumber}&limit=5`
+      );
+
+      console.log('API Response:', res.data);
+
+      // Handle both new pagination format and old array format
+      const postsData = res.data.posts || res.data;
+      const paginationData = res.data.pagination;
+
+      const mappedPosts = postsData.map((post: any) => ({
         ...post,
         user: {
           ...post.user,
-          profileImage: (post.user as any).imageUrl || post.user.profileImage,
+          profileImage: post.user.imageUrl || post.user.profileImage,
         },
-        comments: post.comments.map((comment: Comment) => ({
-          ...comment,
-          user: {
-            ...comment.user,
-            profileImage: (comment.user as any).imageUrl || comment.user.profileImage,
-          },
-          replies: (comment.replies || []).map((reply: Reply) => ({
-            ...reply,
-            user: {
-              ...reply.user,
-              profileImage: (reply.user as any).imageUrl || reply.user.profileImage,
-            },
+        comments: post.comments.map((c: any) => ({
+          ...c,
+          user: { ...c.user, profileImage: c.user.imageUrl || c.user.profileImage },
+          replies: (c.replies || []).map((r: any) => ({
+            ...r,
+            user: { ...r.user, profileImage: r.user.imageUrl || r.user.profileImage },
           })),
         })),
       }));
-      setPosts(postsWithProfileImages);
-      
-      // Initialize likedPosts from API response
-      const likedPostsMap: Record<string, boolean> = {};
-      postsWithProfileImages.forEach((post: Post & { isLiked?: boolean }) => {
-        if (post.isLiked) {
-          likedPostsMap[post._id] = true;
-        }
-      });
-      setLikedPosts(likedPostsMap);
-    } catch {
-      toast.error("Failed to load posts.");
+
+
+      if (pageNumber === 1) {
+        setPosts(mappedPosts);
+      } else {
+        setPosts((prev) => [...prev, ...mappedPosts]);
+      }
+
+      // Update pagination state
+      if (paginationData) {
+        setHasMore(paginationData.hasMore);
+        console.log('Pagination:', paginationData);
+      } else {
+        // Fallback: if no pagination data, assume no more posts
+        setHasMore(false);
+      }
+
+      setPage(pageNumber);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      toast.error("Failed to load posts");
     } finally {
       setLoading(false);
+      setIsFetchingMore(false);
     }
   };
-  
-  console.log(posts);
-  
+
+
+  const loadMorePosts = () => {
+    if (isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    fetchPosts(page + 1);
+  };
+
+
+
   const handleUpgrade = async () => {
     if (!user) {
       toast.error("Please sign in to upgrade.");
@@ -235,8 +260,8 @@ const Timeline: React.FC = () => {
     };
 
     setPosts((prev) =>
-      prev.map((p) => 
-        p._id === postId 
+      prev.map((p) =>
+        p._id === postId
           ? { ...p, comments: [...p.comments, optimisticComment] }
           : p
       )
@@ -277,8 +302,8 @@ const Timeline: React.FC = () => {
     } catch {
       // Remove optimistic comment on error
       setPosts((prev) =>
-        prev.map((p) => 
-          p._id === postId 
+        prev.map((p) =>
+          p._id === postId
             ? { ...p, comments: p.comments.filter(c => c._id !== optimisticComment._id) }
             : p
         )
@@ -305,16 +330,16 @@ const Timeline: React.FC = () => {
     };
 
     setPosts((prev) =>
-      prev.map((p) => 
-        p._id === postId 
+      prev.map((p) =>
+        p._id === postId
           ? {
-              ...p,
-              comments: p.comments.map((c) =>
-                c._id === commentId
-                  ? { ...c, replies: [...(c.replies || []), optimisticReply] }
-                  : c
-              ),
-            }
+            ...p,
+            comments: p.comments.map((c) =>
+              c._id === commentId
+                ? { ...c, replies: [...(c.replies || []), optimisticReply] }
+                : c
+            ),
+          }
           : p
       )
     );
@@ -354,22 +379,43 @@ const Timeline: React.FC = () => {
     } catch {
       // Remove optimistic reply on error
       setPosts((prev) =>
-        prev.map((p) => 
-          p._id === postId 
+        prev.map((p) =>
+          p._id === postId
             ? {
-                ...p,
-                comments: p.comments.map((c) =>
-                  c._id === commentId
-                    ? { ...c, replies: (c.replies || []).filter(r => r._id !== optimisticReply._id) }
-                    : c
-                ),
-              }
+              ...p,
+              comments: p.comments.map((c) =>
+                c._id === commentId
+                  ? { ...c, replies: (c.replies || []).filter(r => r._id !== optimisticReply._id) }
+                  : c
+              ),
+            }
             : p
         )
       );
       toast.error("Failed to add reply.");
     }
   };
+
+  const observerRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!observerRef.current || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isFetchingMore) {
+          console.log('Loading more posts...', { page, hasMore, isFetchingMore });
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% visible
+    );
+
+    observer.observe(observerRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, page, loading]); // Added page and loading to dependencies
+
 
   if (!user) {
     return (
@@ -390,7 +436,7 @@ const Timeline: React.FC = () => {
         {/* Main Content */}
         <main className="lg:col-span-6">
           <h1 className="text-2xl font-semibold text-gray-900 mb-6">Timeline</h1>
-          
+
           {/* Post Composer */}
           <PostComposer
             user={user}
@@ -401,7 +447,8 @@ const Timeline: React.FC = () => {
             onUpgradeClick={handleUpgrade}
             isUpgrading={isUpgrading}
           />
-          
+
+          {/* Posts List */}
           {/* Posts List */}
           {loading ? (
             <div className="flex justify-center py-10">
@@ -434,6 +481,16 @@ const Timeline: React.FC = () => {
                   onDelete={handleDelete}
                 />
               ))}
+
+              {/* Loader for infinite scroll */}
+              {isFetchingMore && (
+                <div className="flex justify-center py-4">
+                  <LoadingSpinner />
+                </div>
+              )}
+
+              {/* Intersection Observer target */}
+              <div ref={observerRef} className="h-10"></div>
             </div>
           )}
         </main>

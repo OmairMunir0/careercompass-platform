@@ -91,7 +91,7 @@ def get_job_posts() -> List[Dict[str, Any]]:
                 if skill_str in skill_map:
                     new_skills.append(skill_map[skill_str])
                 else:
-                    new_skills.append(skill_str) # Keep ID if not found
+                    new_skills.append(skill_str)
             job["requiredSkills"] = new_skills
         
         if "workMode" in job and job["workMode"]:
@@ -107,12 +107,14 @@ def get_job_posts() -> List[Dict[str, Any]]:
 def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
     """
     Fetch normal job posts from the database based on recommended job IDs with same order.
+    Populates user information for job posts.
     """
     database = get_db()
     if database is None:
         return []
 
     collection = database["posts"]
+    users_collection = database["users"]
 
     job_ids = [ObjectId(job["jobId"]) for job in recommended_jobs if "jobId" in job]
 
@@ -120,20 +122,73 @@ def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
     
     print("Job IDs to fetch:", job_ids)
 
-    jobs = []
+    # Collect all user IDs that need to be populated
+    user_ids_to_fetch = set()
+    raw_jobs = []
+    
     for document in cursor:
-        if "jobPostId" in document:
-            document["jobPostId"] = str(document["jobPostId"])
-        jobs.append(document)
+        raw_jobs.append(document)
+        # Check if user field exists and needs to be populated
+        if "user" in document:
+            user_value = document["user"]
+            # Handle both ObjectId and string user IDs
+            if isinstance(user_value, ObjectId):
+                user_ids_to_fetch.add(user_value)
+            elif isinstance(user_value, str):
+                # Convert string to ObjectId for fetching
+                try:
+                    user_ids_to_fetch.add(ObjectId(user_value))
+                except:
+                    pass  # Invalid ObjectId string, skip
+
+    # Bulk fetch user information
+    user_map = {}
+    if user_ids_to_fetch:
+        users_cursor = users_collection.find({"_id": {"$in": list(user_ids_to_fetch)}})
+        for user in users_cursor:
+            user_id = str(user["_id"])
+            user_map[user_id] = {
+                "_id": user_id,
+                "email": user.get("email"),
+                "firstName": user.get("firstName"),
+                "lastName": user.get("lastName"),
+                "imageUrl": user.get("imageUrl")
+            }
+
+    # Process documents: populate users and convert ObjectIds
+    jobs = []
+    for document in raw_jobs:
+        # Populate user field if it's an ObjectId or string ID
+        if "user" in document:
+            user_value = document["user"]
+            if isinstance(user_value, (ObjectId, str)):
+                user_id_str = str(user_value)
+                if user_id_str in user_map:
+                    document["user"] = user_map[user_id_str]
+                else:
+                    # If user not found, keep as string
+                    document["user"] = user_id_str
         
-    # print("Jobs fetched:", jobs)
+        # Convert all ObjectId fields to strings for JSON serialization
+        for key, value in document.items():
+            if isinstance(value, ObjectId):
+                document[key] = str(value)
+            elif isinstance(value, list):
+                document[key] = [str(v) if isinstance(v, ObjectId) else v for v in value]
+            elif isinstance(value, dict) and key != "user":
+                # Handle nested dictionaries (but skip user since we already processed it)
+                for nested_key, nested_value in value.items():
+                    if isinstance(nested_value, ObjectId):
+                        value[nested_key] = str(nested_value)
+        
+        jobs.append(document)
 
-    # # Sort jobs to match the order of recommended_jobs
-    # id_to_job = {job["jobPostId"]: job for job in jobs}
-    # sorted_jobs = [id_to_job.get(str(ObjectId(job["jobId"]))) for job in recommended_jobs if str(ObjectId(job["jobId"])) in id_to_job]
+    # Sort jobs to match the order of recommended_jobs
+    id_to_job = {job["jobPostId"]: job for job in jobs}
+    sorted_jobs = [id_to_job.get(str(ObjectId(job["jobId"]))) for job in recommended_jobs if str(ObjectId(job["jobId"])) in id_to_job]
 
-    return jobs
+    return sorted_jobs
 
 if __name__ == "__main__":
     job_posts = get_job_posts()
-    print(f"Fetched {job_posts} job posts from the database.")
+    print(f"Fetched {len(job_posts)} job posts from the database.")

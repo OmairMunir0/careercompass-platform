@@ -59,24 +59,37 @@ export const createPost = async (req: Request, res: Response) => {
 };
 
 /**
- * @desc Get all posts (feed)
- * @route GET /api/posts
+ * @desc Get all posts (feed) with infinite scroll pagination
+ * @route GET /api/posts?page=1&limit=10
  * @access Public
  */
 export const getAllPosts = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id || req.query.userId;
-    const cacheKey = userId ? `posts:all:user:${userId}` : "posts:all";
+
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50); // Max 50 per page
+    const skip = (page - 1) * limit;
+
+    const cacheKey = userId
+      ? `posts:all:user:${userId}:page:${page}:limit:${limit}`
+      : `posts:all:page:${page}:limit:${limit}`;
 
     console.log(userId);
-    
+
     // Try to get from cache
     const cached = await getCached(cacheKey);
     if (cached) {
       return res.status(200).json(cached);
     }
 
-    const posts = await Post.find()
+    // Fetch ALL normal posts (no pagination yet)
+    const normal_posts = await Post.find({
+      type: { $exists: false },
+      jobMeta: { $exists: false },
+      jobPostId: { $exists: false },
+    })
       .populate("user", "firstName lastName email imageUrl")
       .populate({
         path: "comments.user",
@@ -88,7 +101,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
       })
       .sort({ createdAt: -1 })
       .lean();
-      
+
     const fastapiBase = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
     let recommendedJobs: any = null;
     try {
@@ -98,21 +111,49 @@ export const getAllPosts = async (req: Request, res: Response) => {
         const url = `${fastapiBase}/api/timeline/job_posts?${params.toString()}`;
         const response = await axios.get(url);
         recommendedJobs = response.data;
-        console.log(recommendedJobs);
       }
     } catch (e: any) {
       console.error("FastAPI timeline error:", e?.response?.data || e?.message);
     }
 
+    // Merge normal posts with recommended job posts
+    let posts: any[] = [...normal_posts];
+
+    if (recommendedJobs && Array.isArray(recommendedJobs) && recommendedJobs.length > 0) {
+      let insertIndex = Math.floor(Math.random() * (process.env.REACT_APP_POST_INTERVAL as any)) + 1; // Random index between 1 and n
+
+      for (const job of recommendedJobs) {
+        const jobPost = {
+          ...job,
+          // isRecommendedJob: true, 
+        };
+
+        // insert job at this position
+        posts.splice(insertIndex, 0, jobPost);
+
+        insertIndex += Math.floor(Math.random() * (process.env.REACT_APP_POST_INTERVAL as any)) + 1;
+
+        if (insertIndex > posts.length) {
+          insertIndex = posts.length;
+        }
+      }
+    }
+
+    // Calculate total before pagination
+    const total = posts.length;
+
+    // Apply pagination to merged posts
+    const paginatedPosts = posts.slice(skip, skip + limit);
+
     // Handle backward compatibility: likes can be number (old) or array (new)
     // Add isLiked flag for authenticated users
-    const postsWithLikedStatus = posts.map((post: any) => {
+    const postsWithLikedStatus = paginatedPosts.map((post: any) => {
       const postObj = { ...post };
-      
+
       // Handle both number (old) and array (new) formats
       let likesArray: any[] = [];
       let likesCount = 0;
-      
+
       if (Array.isArray(post.likes)) {
         // New format - array of ObjectIds
         likesArray = post.likes || [];
@@ -126,7 +167,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
         likesArray = [];
         likesCount = 0;
       }
-      
+
       if (req.user) {
         // Check if current user liked this post
         // Handle both ObjectId objects and string IDs
@@ -147,16 +188,40 @@ export const getAllPosts = async (req: Request, res: Response) => {
       } else {
         postObj.isLiked = false;
       }
-      
+
       // Return likes as count for backward compatibility
       postObj.likes = likesCount;
+
+      console.log(postObj)
+
       return postObj;
     });
 
-    // Cache the result
-    await setCached(cacheKey, postsWithLikedStatus, CACHE_TTL.SHORT);
+    console.log(`Total posts: ${total}, Returning page ${page} with ${postsWithLikedStatus.length} posts`);
 
-    res.status(200).json(postsWithLikedStatus);
+    // Prepare response with pagination metadata for infinite scroll
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = skip + limit < total;
+
+    const response = {
+      posts: postsWithLikedStatus,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore
+      }
+    };
+
+    // Cache the result
+    try {
+      await setCached(cacheKey, response, CACHE_TTL.SHORT);
+    } catch (err: any) {
+      console.error("Redis cache write failed:", err.message);
+    }
+
+    res.status(200).json(response);
   } catch (err: any) {
     console.error("Error in getAllPosts:", err);
     console.error("Error stack:", err.stack);
@@ -199,7 +264,7 @@ export const getMyPosts = async (req: Request, res: Response) => {
 export const getPostById = async (req: Request, res: Response) => {
   try {
     const cacheKey = req.user ? `posts:${req.params.postId}:user:${req.user.id}` : `posts:${req.params.postId}`;
-    
+
     // Try to get from cache
     const cached = await getCached(cacheKey);
     if (cached) {
@@ -222,11 +287,11 @@ export const getPostById = async (req: Request, res: Response) => {
 
     // Add isLiked flag
     const postObj: any = { ...post };
-    
+
     // Handle both number (old) and array (new) formats
     let likesArray: any[] = [];
     let likesCount = 0;
-    
+
     if (Array.isArray(post.likes)) {
       likesArray = post.likes;
       likesCount = post.likes.length;
@@ -234,7 +299,7 @@ export const getPostById = async (req: Request, res: Response) => {
       likesCount = post.likes;
       likesArray = [];
     }
-    
+
     if (req.user) {
       // Check if current user liked this post
       const userIdStr = req.user.id.toString();
@@ -254,7 +319,7 @@ export const getPostById = async (req: Request, res: Response) => {
     } else {
       postObj.isLiked = false;
     }
-    
+
     // Convert likes to count
     postObj.likes = likesCount;
 
@@ -296,10 +361,10 @@ export const updatePost = async (req: Request, res: Response) => {
     );
 
     if (!post) return res.status(404).json({ message: "Post not found or unauthorized" });
-    
+
     // Invalidate posts cache
     await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
-    
+
     res.status(200).json(post);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -321,10 +386,10 @@ export const deletePost = async (req: Request, res: Response) => {
     });
 
     if (!deleted) return res.status(404).json({ message: "Post not found or unauthorized" });
-    
+
     // Invalidate posts cache
     await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
-    
+
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -342,18 +407,18 @@ export const likePost = async (req: Request, res: Response) => {
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     const userId = new Types.ObjectId(req.user.id);
-    
+
     // Handle backward compatibility: convert number to array if needed
     // Get the raw document to check the actual type
     const postDoc = post.toObject ? post.toObject() : post;
     let likesArray: Types.ObjectId[] = [];
-    
+
     if (typeof (postDoc as any).likes === "number") {
       // Old format - start with empty array (can't preserve individual likes from count)
       likesArray = [];
     } else if (Array.isArray((postDoc as any).likes)) {
       // Already an array - use it
-      likesArray = (postDoc as any).likes.map((id: any) => 
+      likesArray = (postDoc as any).likes.map((id: any) =>
         id instanceof Types.ObjectId ? id : new Types.ObjectId(id)
       );
     } else {
@@ -372,14 +437,14 @@ export const likePost = async (req: Request, res: Response) => {
 
     // Add user to likes array
     likesArray.push(userId);
-    
+
     // Update the post with the new array
     post.likes = likesArray as any;
     await post.save();
-    
+
     // Invalidate cache for this post
     await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
-    
+
     // Create notification for post owner (if different from liker)
     if (post.user.toString() !== req.user.id) {
       const liker = await User.findById(req.user.id);
@@ -392,7 +457,7 @@ export const likePost = async (req: Request, res: Response) => {
         post._id
       );
     }
-    
+
     res.status(200).json({ message: "Post liked", likes: likesArray.length, isLiked: true });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -412,18 +477,18 @@ export const unlikePost = async (req: Request, res: Response) => {
     // Get the raw document to check the actual type
     const postDoc = post.toObject ? post.toObject() : post;
     let likesArray: Types.ObjectId[] = [];
-    
+
     if (typeof (postDoc as any).likes === "number") {
       // Old format - can't unlike if it was just a count
       // This shouldn't happen if the post was already converted, but handle it gracefully
-      return res.status(200).json({ 
-        message: "Post unliked", 
-        likes: Math.max(0, (postDoc as any).likes - 1), 
-        isLiked: false 
+      return res.status(200).json({
+        message: "Post unliked",
+        likes: Math.max(0, (postDoc as any).likes - 1),
+        isLiked: false
       });
     } else if (Array.isArray((postDoc as any).likes)) {
       // Already an array - use it
-      likesArray = (postDoc as any).likes.map((id: any) => 
+      likesArray = (postDoc as any).likes.map((id: any) =>
         id instanceof Types.ObjectId ? id : new Types.ObjectId(id)
       );
     } else {
@@ -435,14 +500,14 @@ export const unlikePost = async (req: Request, res: Response) => {
     likesArray = likesArray.filter(
       (likeId) => likeId.toString() !== req.user.id
     );
-    
+
     // Update the post with the new array
     post.likes = likesArray as any;
     await post.save();
-    
+
     // Invalidate cache for this post
     await invalidateCache([`posts:${req.params.postId}`, "posts:*"]);
-    
+
     res.status(200).json({ message: "Post unliked", likes: likesArray.length, isLiked: false });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -579,7 +644,7 @@ export const addReply = async (req: Request, res: Response) => {
 export const getTrendingPosts = async (req: Request, res: Response) => {
   try {
     const cacheKey = req.user ? `posts:trending:user:${req.user.id}` : "posts:trending";
-    
+
     // Try to get from cache
     const cached = await getCached(cacheKey);
     if (cached) {
@@ -604,7 +669,7 @@ export const getTrendingPosts = async (req: Request, res: Response) => {
       const bLikes = Array.isArray(b.likes) ? b.likes.length : (b.likes || 0);
       const aComments = a.comments?.length || 0;
       const bComments = b.comments?.length || 0;
-      
+
       if (aLikes !== bLikes) return bLikes - aLikes;
       return bComments - aComments;
     });
@@ -614,11 +679,11 @@ export const getTrendingPosts = async (req: Request, res: Response) => {
     // Convert likes array to count and add isLiked flag
     const postsWithLikedStatus = topPosts.map((post: any) => {
       const postObj = { ...post };
-      
+
       // Handle both formats
       let likesArray: any[] = [];
       let likesCount = 0;
-      
+
       if (Array.isArray(post.likes)) {
         likesArray = post.likes;
         likesCount = post.likes.length;
@@ -626,7 +691,7 @@ export const getTrendingPosts = async (req: Request, res: Response) => {
         likesCount = post.likes;
         likesArray = [];
       }
-      
+
       if (req.user) {
         postObj.isLiked = likesArray.some(
           (likeId: any) => {
@@ -638,7 +703,7 @@ export const getTrendingPosts = async (req: Request, res: Response) => {
       } else {
         postObj.isLiked = false;
       }
-      
+
       postObj.likes = likesCount;
       return postObj;
     });
@@ -657,7 +722,7 @@ export const getTrendingPosts = async (req: Request, res: Response) => {
 export const getRecentPosts = async (req: Request, res: Response) => {
   try {
     const cacheKey = req.user ? `posts:recent:user:${req.user.id}` : "posts:recent";
-    
+
     // Try to get from cache
     const cached = await getCached(cacheKey);
     if (cached) {
@@ -681,11 +746,11 @@ export const getRecentPosts = async (req: Request, res: Response) => {
     // Convert likes array to count and add isLiked flag
     const postsWithLikedStatus = posts.map((post: any) => {
       const postObj = { ...post };
-      
+
       // Handle both formats
       let likesArray: any[] = [];
       let likesCount = 0;
-      
+
       if (Array.isArray(post.likes)) {
         likesArray = post.likes;
         likesCount = post.likes.length;
@@ -693,7 +758,7 @@ export const getRecentPosts = async (req: Request, res: Response) => {
         likesCount = post.likes;
         likesArray = [];
       }
-      
+
       if (req.user) {
         postObj.isLiked = likesArray.some(
           (likeId: any) => {
@@ -705,7 +770,7 @@ export const getRecentPosts = async (req: Request, res: Response) => {
       } else {
         postObj.isLiked = false;
       }
-      
+
       postObj.likes = likesCount;
       return postObj;
     });

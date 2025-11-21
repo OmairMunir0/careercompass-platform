@@ -34,7 +34,7 @@ async def get_recommended(user_id: str = Query(...)):
     print("Recommended Jobs:", recommended)
     
     # 4. Convert recommended jobs to normal job post format
-    converted_normal_posts = get_normal_job_posts(recommended)
-    print("Converted Normal Posts:", converted_normal_posts)
+    timeline_posts = get_normal_job_posts(recommended)
+    print("Converted Normal Posts:", timeline_posts)
     
-    return recommended
+    return timeline_posts
