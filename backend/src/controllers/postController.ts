@@ -120,7 +120,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
     let posts: any[] = [...normal_posts];
 
     if (recommendedJobs && Array.isArray(recommendedJobs) && recommendedJobs.length > 0) {
-      let insertIndex = Math.floor(Math.random() * (process.env.REACT_APP_POST_INTERVAL as any)) + 1; // Random index between 1 and n
+      let insertIndex = Math.floor(Math.random() * parseInt(process.env.REACT_APP_POSTS_INTERVAL as any)) + 1; // Random index between 1 and n
 
       for (const job of recommendedJobs) {
         const jobPost = {
@@ -131,7 +131,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
         // insert job at this position
         posts.splice(insertIndex, 0, jobPost);
 
-        insertIndex += Math.floor(Math.random() * (process.env.REACT_APP_POST_INTERVAL as any)) + 1;
+        insertIndex += Math.floor(Math.random() * parseInt(process.env.REACT_APP_POSTS_INTERVAL as any)) + 1;
 
         if (insertIndex > posts.length) {
           insertIndex = posts.length;
