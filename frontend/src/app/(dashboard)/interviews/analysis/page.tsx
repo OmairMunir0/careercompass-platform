@@ -36,12 +36,15 @@ const Analysis: React.FC = () => {
 
   const result = latestAnalysis.result || [];         
   const overallScore = latestAnalysis.overall_score;
-  console.log(latestAnalysis)
+  const totalQuestions = result.length;
+  const questionsAnswered = totalQuestions - result.filter(question => question.percentage === 0).length;
 
   const emotionData = Object.entries(latestAnalysis.emotions || {}).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     value: Number(value),
   }));
+
+  console.log(overallScore);
 
   return (
     <div className="max-w-5xl mx-auto mt-10 p-6 space-y-8">
@@ -80,6 +83,7 @@ const Analysis: React.FC = () => {
           <h2 className="text-xl font-semibold">Overall Performance Score</h2>
           <p className="text-sm text-indigo-100 mt-1">Based on answer accuracy</p>
         </div>
+        <p className="text-sm text-indigo-100 mt-1">Questions Answered: {questionsAnswered}/{totalQuestions}</p>
         <div className="text-5xl font-bold">{overallScore}%</div>
       </div>
 
@@ -120,7 +124,7 @@ const Analysis: React.FC = () => {
       </div>
 
       {/* Emotions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white shadow-md rounded-2xl p-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Emotion Distribution</h2>
           {emotionData.length > 0 ? (
@@ -150,7 +154,7 @@ const Analysis: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Summary */}
       <div className="bg-white shadow-md rounded-2xl p-6">

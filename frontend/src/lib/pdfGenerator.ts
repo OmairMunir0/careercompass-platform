@@ -9,7 +9,7 @@ interface User {
 
 interface InterviewAnalysis {
   overall_score: number;
-  emotions: Record<string, number>;
+  emotions?: Record<string, number>;
   video_path?: string;
 }
 

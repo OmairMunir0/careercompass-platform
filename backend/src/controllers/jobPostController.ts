@@ -6,6 +6,7 @@ import { UserSkill } from "../models/UserSkill";
 import { User } from "../models/User";
 import { createNotification } from "../utils/notifications";
 import { isSubscriptionActive } from "../utils/subscription";
+import axios from "axios";
 
 /**
  * @desc Create a new job post
@@ -67,7 +68,7 @@ export const createJobPost = async (req: Request, res: Response) => {
         // `Salary: ${salaryMin} - ${salaryMax}`,
         // skillsText ? `Skills: ${skillsText}` : null,
         // applicationEmail ? `Apply via Email: ${applicationEmail}` : null,
-        `Description: ${description}`, 
+        `Description: ${description}`,
       ].filter(Boolean).join("\n");
 
       const timelinePost = await Post.create({
@@ -156,20 +157,46 @@ export const createJobPost = async (req: Request, res: Response) => {
 export const getJobRecommendations = async (req: Request, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.user?.id || req.query.userId;
 
     // Get active jobs, sorted by creation date (most recent first)
     // In a real implementation, you'd match based on user skills, experience, etc.
-    const jobs = await JobPost.find({ isActive: true })
+    const fastapiBase = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
+    let recommendedJobs: any = null;
+    try {
+      if (!userId) throw new Error("Missing userId for recommendations");
+
+      const params = new URLSearchParams();
+      params.set("user_id", userId);
+      const url = `${fastapiBase}/api/timeline/job_posts?${params.toString()}`;
+      const response = await axios.get(url);
+      recommendedJobs = response.data;
+    } catch (e: any) {
+      console.error("FastAPI timeline error:", e?.response?.data || e?.message);
+    }
+
+    // 2. Extract jobPostIds
+    const jobIds = recommendedJobs.map((job: any) => job.jobId);
+
+
+    const jobs = await JobPost.find({ _id: { $in: jobPostIds }, isActive: true })
       .populate("recruiter", "firstName lastName email")
       .populate("jobType", "name")
       .populate("workMode", "name")
       .populate("experienceLevel", "name")
       .populate("requiredSkills", "name")
-      .sort({ createdAt: -1 })
       .limit(5)
       .lean();
 
-    res.status(200).json({ results: jobs });
+    console.log("Jobs:", jobs);
+
+    const orderedJobs = jobIds.map(id =>
+      jobsFromDB.find(job => String(job._id) === String(id))
+    ).filter(Boolean);
+
+    console.log("Recommended Jobs:", orderedJobs);
+
+    res.status(200).json({ results: orderedJobs });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
