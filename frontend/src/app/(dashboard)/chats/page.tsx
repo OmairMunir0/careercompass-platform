@@ -2,9 +2,11 @@
 
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
-import { ArrowLeft, Building, Check, CheckCheck, Search, Send, User } from "lucide-react";
+import { ArrowLeft, Building, Check, CheckCheck, Search, Send, User, UserPlus } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { formatDate, formatDateTime } from "@/lib/date";
+import { useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface Message {
   _id: string;
@@ -31,6 +33,7 @@ interface Conversation {
 
 const ChatsPage: React.FC = () => {
   const { user } = useAuthStore();
+  const searchParams = useSearchParams();
   const [chats, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -38,6 +41,8 @@ const ChatsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [showFollowedUsers, setShowFollowedUsers] = useState(false);
+  const [followedUsers, setFollowedUsers] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +84,31 @@ const ChatsPage: React.FC = () => {
     loadConversations();
   }, [user?._id]);
 
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    if (userId && chats.length > 0 && !selectedConversation) {
+      const existingChat = chats.find(c => c.participantId === userId);
+      if (existingChat) {
+        setSelectedConversation(existingChat._id);
+      } else {
+        handleCreateChatWithUser(userId);
+      }
+    }
+  }, [searchParams, chats, selectedConversation]);
+
+  useEffect(() => {
+    const loadFollowedUsers = async () => {
+      if (!user?._id || !showFollowedUsers) return;
+      try {
+        const { data } = await axiosInstance.get(`/follows/following/${user._id}`);
+        setFollowedUsers(data.data || []);
+      } catch (err) {
+        console.error('Failed to load followed users:', err);
+      }
+    };
+    loadFollowedUsers();
+  }, [user?._id, showFollowedUsers]);
+
   // Fetch messages
   useEffect(() => {
     const loadMessages = async () => {
@@ -89,9 +119,9 @@ const ChatsPage: React.FC = () => {
       try {
         const { data } = await axiosInstance.get(`/chats/${selectedConversation}/messages`);
         const mapped: Message[] = data.map((m: any) => ({
-          id: m._id,
+          _id: m._id,
           content: m.content,
-          senderId: m.sender._id,
+          senderId: m.sender._id || m.sender,
           receiverId: m.sender._id === user?._id ? "" : user?._id || "",
           createdAt: m.createdAt,
           isRead: m.isRead,
@@ -146,7 +176,7 @@ const ChatsPage: React.FC = () => {
       const newMsg: Message = {
         _id: data._id,
         content: data.content,
-        senderId: data.sender._id,
+        senderId: data.sender._id || data.sender,
         receiverId,
         createdAt: data.createdAt,
         isRead: data.isRead,
@@ -164,6 +194,47 @@ const ChatsPage: React.FC = () => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleCreateChatWithUser = async (userId: string) => {
+    try {
+      const { data } = await axiosInstance.post('/chats/get-or-create', {
+        recruiterId: user?._id,
+        candidateId: userId,
+      });
+
+      const newChat: Conversation = {
+        _id: data._id,
+        participantId: userId,
+        participantName: data.candidate?.firstName
+          ? `${data.candidate.firstName} ${data.candidate.lastName}`
+          : data.recruiter?.firstName
+          ? `${data.recruiter.firstName} ${data.recruiter.lastName}`
+          : `User ${userId}`,
+        participantRole: data.candidate ? 'candidate' : 'recruiter',
+        lastMessage: data.messages?.length
+          ? {
+              content: data.messages[data.messages.length - 1].content,
+              createdAt: data.messages[data.messages.length - 1].createdAt,
+              senderId: data.messages[data.messages.length - 1].sender,
+            }
+          : { content: 'No messages yet', createdAt: data.updatedAt, senderId: '' },
+        unreadCount: 0,
+        isOnline: false,
+      };
+
+      setConversations((prev) => {
+        const exists = prev.find((c) => c._id === newChat._id);
+        if (exists) return prev;
+        return [newChat, ...prev];
+      });
+
+      setSelectedConversation(newChat._id);
+      toast.success('Chat opened');
+    } catch (err: any) {
+      console.error('Failed to create chat:', err);
+      toast.error(err?.response?.data?.message || 'Failed to open chat');
     }
   };
 
@@ -200,7 +271,16 @@ const ChatsPage: React.FC = () => {
         }`}
       >
         <div className="p-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-900 mb-4">Chats</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-semibold text-gray-900">Chats</h1>
+            <button
+              onClick={() => setShowFollowedUsers(!showFollowedUsers)}
+              className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+              title="Message followed user"
+            >
+              <UserPlus className="w-5 h-5" />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -213,7 +293,47 @@ const ChatsPage: React.FC = () => {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
+          {showFollowedUsers ? (
+            <div>
+              <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                <h3 className="font-medium text-gray-900">Message Followed Users</h3>
+                <button
+                  onClick={() => setShowFollowedUsers(false)}
+                  className="text-sm text-purple-600 hover:text-purple-700"
+                >
+                  Back to Chats
+                </button>
+              </div>
+              {followedUsers.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">No followed users</div>
+              ) : (
+                followedUsers.map((person) => (
+                  <div
+                    key={person._id}
+                    onClick={() => {
+                      setShowFollowedUsers(false);
+                      handleCreateChatWithUser(person._id);
+                    }}
+                    className="p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">
+                          {person.firstName} {person.lastName}
+                        </h3>
+                        {person.position && (
+                          <p className="text-xs text-gray-500">{person.position}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : filteredConversations.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
               {searchQuery ? "No chats found" : "No chats yet"}
             </div>

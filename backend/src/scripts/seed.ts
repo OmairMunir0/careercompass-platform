@@ -21,6 +21,7 @@ import {
   usersData,
   workModesData,
   interviewQuestionsData,
+  followsData,
 } from "../data";
 
 import {
@@ -44,6 +45,7 @@ import {
   WorkMode,
   InterviewQuestion,
 } from "../models";
+import { Follow } from "../models/Follow";
 
 export async function seedChats() {
   for (const chat of chatData) {
@@ -518,6 +520,45 @@ export async function seedInterviewQuestions() {
   console.log("Interview questions seeding complete.");
 }
 
+export async function seedFollows() {
+  for (const follow of followsData) {
+    const follower = await User.findOne({ email: follow.followerEmail });
+    const following = await User.findOne({ email: follow.followingEmail });
+
+    if (!follower || !following) {
+      console.error(
+        `Cannot create follow relationship. Follower: ${follow.followerEmail}, Following: ${follow.followingEmail}`
+      );
+      continue;
+    }
+
+    const exists = await Follow.findOne({
+      follower: follower._id,
+      following: following._id,
+    });
+
+    if (exists) {
+      console.log(
+        `Follow relationship already exists: ${follow.followerEmail} -> ${follow.followingEmail}. Skipping.`
+      );
+      continue;
+    }
+
+    await Follow.create({
+      follower: follower._id,
+      following: following._id,
+    });
+
+    // Update follower and following counts
+    await User.findByIdAndUpdate(follower._id, { $inc: { followingCount: 1 } });
+    await User.findByIdAndUpdate(following._id, { $inc: { followersCount: 1 } });
+
+    console.log(`Created follow: ${follow.followerEmail} -> ${follow.followingEmail}`);
+  }
+
+  console.log("Follow relationships seeding complete.");
+}
+
 
 
 export async function runSeed() {
@@ -548,6 +589,7 @@ export async function runSeed() {
     await seedSavedJobs();
     await seedUserCertifications();
     await seedInterviewQuestions();
+    await seedFollows();
 
     console.log("Seeding complete.");
   } catch (err) {

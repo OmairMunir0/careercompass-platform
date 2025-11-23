@@ -13,7 +13,8 @@ export const corsMiddleware = cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // allow Postman or server-to-server
     if (CLIENT_URLS.includes(origin)) callback(null, true);
-    else callback(new Error("Not allowed by CORS"));
+    else callback(null , true);
+    // else callback(new Error("Not allowed by CORS"));
   },
 });
 

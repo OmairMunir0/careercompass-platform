@@ -2,7 +2,7 @@
 
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuthStore } from "@/store/authStore";
-import { Briefcase, Eye, MapPin, MessageSquare, Users } from "lucide-react";
+import { Briefcase, Eye, MapPin, MessageSquare, Users, UserPlus, UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -89,6 +89,7 @@ const CandidateSearch: React.FC = () => {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [statuses, setStatuses] = useState<Array<{ _id: string; name: string }>>([]);
+  const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({});
 
   // Load users
   useEffect(() => {
@@ -139,6 +140,29 @@ const CandidateSearch: React.FC = () => {
     loadStatuses();
   }, []);
 
+  useEffect(() => {
+    const loadFollowStatuses = async () => {
+      if (!user?._id || filteredUsers.length === 0) return;
+      
+      try {
+        const statusMap: Record<string, boolean> = {};
+        
+        for (const candidate of filteredUsers) {
+          if (candidate._id === user._id) continue;
+          
+          const { data } = await axiosInstance.get(`/follows/status/${candidate._id}`);
+          statusMap[candidate._id] = data.isFollowing || false;
+        }
+        
+        setFollowStatus(statusMap);
+      } catch (err) {
+        console.error("Failed to load follow statuses:", err);
+      }
+    };
+
+    loadFollowStatuses();
+  }, [filteredUsers, user?._id]);
+
   const handleChangeApplicationStatus = async (appId: string, statusId: string) => {
     try {
       const res = await axiosInstance.put(`/job-applications/${appId}/status`, { statusId });
@@ -188,49 +212,29 @@ const CandidateSearch: React.FC = () => {
     setFilteredUsers(filtered);
   }, [users, searchQuery, locationFilter]);
 
-  // Start or get chat
-  const handleStartConversation = async (candidateId: string) => {
+  const handleFollowToggle = async (targetUserId: string) => {
     if (!user?._id) return;
 
     try {
-      // Call backend to get or create a chat
-      const { data } = await axiosInstance.post("/chats/get-or-create", {
-        recruiterId: user._id,
-        candidateId,
-      });
+      const isCurrentlyFollowing = followStatus[targetUserId];
 
-      // Transform returned chat into your Conversation shape
-      const newChat: IChat = {
-        _id: data._id,
-        participantId: candidateId,
-        participantName: data.candidate?.firstName
-          ? `${data.candidate.firstName} ${data.candidate.lastName}`
-          : `User ${candidateId}`,
-        participantRole: "candidate",
-        lastMessage: data.messages.length
-          ? {
-              content: data.messages[data.messages.length - 1].content,
-              createdAt: data.messages[data.messages.length - 1].createdAt,
-              senderId: data.messages[data.messages.length - 1].sender,
-            }
-          : { content: "No messages yet", createdAt: data.updatedAt, senderId: "" },
-        unreadCount: 0,
-        isOnline: false,
-      };
-
-      // Add to local state if it’s a new chat
-      setConversations((prev) => {
-        const exists = prev.find((c) => c._id === newChat._id);
-        if (exists) return prev;
-        return [newChat, ...prev];
-      });
-
-      // Open the chat
-      setSelectedConversation(newChat._id);
-    } catch (err) {
-      console.error("Failed to start conversation:", err);
-      alert("Failed to open chat.");
+      if (isCurrentlyFollowing) {
+        await axiosInstance.delete(`/follows/${targetUserId}`);
+        setFollowStatus((prev) => ({ ...prev, [targetUserId]: false }));
+        toast.success("Unfollowed successfully");
+      } else {
+        await axiosInstance.post(`/follows/${targetUserId}`);
+        setFollowStatus((prev) => ({ ...prev, [targetUserId]: true }));
+        toast.success("Following successfully");
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle follow:", err);
+      toast.error(err?.response?.data?.message || "Failed to update follow status");
     }
+  };
+
+  const handleStartConversation = (candidateId: string) => {
+    router.push(`/chats?userId=${candidateId}`);
   };
 
   if (loading) {
@@ -416,6 +420,29 @@ const CandidateSearch: React.FC = () => {
                   </div>
 
                   <div className="flex space-x-3">
+                    {u._id !== user?._id && (
+                      <button
+                        onClick={() => handleFollowToggle(u._id)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
+                          followStatus[u._id]
+                            ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        {followStatus[u._id] ? (
+                          <>
+                            <UserMinus className="w-4 h-4" />
+                            <span>Unfollow</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4" />
+                            <span>Follow</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
                     <button
                       onClick={() => handleStartConversation(u._id)}
                       className="flex items-center text-white bg-purple-600 space-x-2 px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"

@@ -27,6 +27,7 @@ import blogRoutes from "./blogRoutes";
 import analyticsRoutes from "./analyticsRoutes";
 import paymentRoutes from "./paymentRoutes";
 import notificationRoutes from "./notificationRoutes";
+import followRoutes from "./followRoutes";
 
 const router = Router();
 
@@ -57,5 +58,6 @@ router.use("/blogs", blogRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/notifications", notificationRoutes);
+router.use("/follows", followRoutes);
 
 export default router;
