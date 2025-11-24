@@ -14,6 +14,8 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import axiosInstance from "@/lib/axiosInstance";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import toast from "react-hot-toast";
+
 
 interface ProfileUser {
   _id: string;
@@ -30,6 +32,7 @@ interface ProfileUser {
   companyWebsite?: string;
   position?: string;
   linkedinUrl?: string;
+  resumeUrl?: string;
 }
 
 const UserProfilePage: React.FC = () => {
@@ -41,6 +44,8 @@ const UserProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "personal" | "experience" | "education" | "certifications" | "skills" | "resume"
   >("personal");
+  const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({});
+
 
   const userId = params.userId as string;
   const isOwnProfile = currentUser?._id === userId;
@@ -69,6 +74,43 @@ const UserProfilePage: React.FC = () => {
 
     fetchUser();
   }, [userId, isOwnProfile, router]);
+
+
+  useEffect(() => {
+    const loadFollowStatus = async () => {
+      if (!currentUser?._id || !profileUser?._id || isOwnProfile) return;
+
+      try {
+        const { data } = await axiosInstance.get(`/follows/status/${profileUser._id}`);
+        setFollowStatus({ [profileUser._id]: data.isFollowing || false });
+      } catch (err) {
+        console.error("Failed to load follow status:", err);
+      }
+    };
+
+    loadFollowStatus();
+  }, [profileUser?._id, currentUser?._id, isOwnProfile]);
+
+  const handleFollowToggle = async (targetUserId: string) => {
+    if (!currentUser?._id) return;
+
+    try {
+      const isCurrentlyFollowing = followStatus[targetUserId];
+
+      if (isCurrentlyFollowing) {
+        await axiosInstance.delete(`/follows/${targetUserId}`);
+        setFollowStatus((prev) => ({ ...prev, [targetUserId]: false }));
+        toast.success("Unfollowed successfully");
+      } else {
+        await axiosInstance.post(`/follows/${targetUserId}`);
+        setFollowStatus((prev) => ({ ...prev, [targetUserId]: true }));
+        toast.success("Following successfully");
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle follow:", err);
+      toast.error(err?.response?.data?.message || "Failed to update follow status");
+    }
+  };
 
   if (loading) {
     return (
@@ -123,9 +165,19 @@ const UserProfilePage: React.FC = () => {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {profileUser.firstName} {profileUser.lastName}
-                </h1>
+                <div className="flex justify-between items-center">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {profileUser.firstName} {profileUser.lastName}
+                  </h1>
+
+                  <button onClick={() => handleFollowToggle(profileUser._id)}
+                    className={`inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px] ${followStatus[profileUser._id]
+                      ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      : "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800"
+                      }`}>
+                    {followStatus[profileUser._id] ? "Unfollow" : "Follow"}
+                  </button>
+                </div>
                 <p className="text-gray-600">{profileUser.email}</p>
                 <p className="text-sm text-gray-500">Role: {profileUser.role || "—"}</p>
                 {profileUser.bio && (
@@ -153,11 +205,10 @@ const UserProfilePage: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                      activeTab === tab.id
-                        ? "border-purple-500 text-purple-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                      ? "border-purple-500 text-purple-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{tab.name}</span>

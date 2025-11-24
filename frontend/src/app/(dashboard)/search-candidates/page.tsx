@@ -91,6 +91,8 @@ const CandidateSearch: React.FC = () => {
   const [statuses, setStatuses] = useState<Array<{ _id: string; name: string }>>([]);
   const [followStatus, setFollowStatus] = useState<Record<string, boolean>>({});
 
+  console.log(applications);
+
   // Load users
   useEffect(() => {
     const loadUsers = async () => {
@@ -336,15 +338,16 @@ const CandidateSearch: React.FC = () => {
                   )}
 
                   <div className="mt-4 flex items-center space-x-2">
-                    {app.resumeUrl ? (
+                    {app.resumeUrl ? (<>
+                      {console.log(app.resumeUrl)}
                       <a
-                        href={app.resumeUrl.startsWith("http") ? app.resumeUrl : `http://localhost:3001/${app.resumeUrl}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                      href={app.resumeUrl.startsWith("http") ? app.resumeUrl : `http://localhost:3001/${app.resumeUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                       >
                         View Resume
-                      </a>
+                      </a></>
                     ) : (
                       <span className="text-sm text-gray-500">No resume attached</span>
                     )}

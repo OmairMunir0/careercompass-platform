@@ -173,25 +173,27 @@ export const getJobRecommendations = async (req: Request, res: Response) => {
       recommendedJobs = response.data;
     } catch (e: any) {
       console.error("FastAPI timeline error:", e?.response?.data || e?.message);
+      // Return empty results if FastAPI fails
+      return res.status(200).json({ results: [] });
     }
 
-    // 2. Extract jobPostIds
-    const jobIds = recommendedJobs.map((job: any) => job.jobId);
+    // 2. Extract jobPostIds from the FastAPI response
+    const jobIds = recommendedJobs.map((job: any) => job.jobPostId);
 
-
-    const jobs = await JobPost.find({ _id: { $in: jobPostIds }, isActive: true })
+    // 3. Fetch job details from MongoDB
+    const jobs = await JobPost.find({ _id: { $in: jobIds }, isActive: true })
       .populate("recruiter", "firstName lastName email")
       .populate("jobType", "name")
       .populate("workMode", "name")
       .populate("experienceLevel", "name")
       .populate("requiredSkills", "name")
-      .limit(5)
       .lean();
 
     console.log("Jobs:", jobs);
 
+    // 4. Order jobs according to the recommendation order
     const orderedJobs = jobIds.map(id =>
-      jobsFromDB.find(job => String(job._id) === String(id))
+      jobs.find(job => String(job._id) === String(id))
     ).filter(Boolean);
 
     console.log("Recommended Jobs:", orderedJobs);
