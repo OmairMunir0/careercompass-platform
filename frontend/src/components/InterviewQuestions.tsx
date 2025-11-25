@@ -15,11 +15,11 @@ interface InterviewQuestion {
 }
 
 interface InterviewQuestionsProps {
+  questions: InterviewQuestion[];
   speakQuestion?: (text: string) => void;
   interviewStarted?: boolean;
   recordingStopped?: boolean;
   reset?: boolean;
-  onQuestionsLoaded?: any;
 }
 
 // --- Constants ---
@@ -27,18 +27,18 @@ const DEFAULT_ANSWER_TIME = 30;
 
 // --- InterviewQuestions Component ---
 const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
+  questions: propQuestions,
   speakQuestion,
   interviewStarted,
   recordingStopped,
   reset,
-  onQuestionsLoaded,
 }) => {
   const searchParams = useSearchParams();
   const token = useAuthStore.getState().token;
   const categoryId = searchParams.get("categoryId");
   const categoryName = searchParams.get("categoryName");
 
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
+  const [questions, setQuestions] = useState<InterviewQuestion[]>(propQuestions || []);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timer, setTimer] = useState(0);
@@ -47,28 +47,12 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
   const answerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const nextQuestionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch questions
+  // Update questions when props change
   useEffect(() => {
-    if (token && categoryId) fetchQuestions();
-  }, [token, categoryId]);
-
-  const fetchQuestions = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.get("/interview-questions", {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { categoryId, categoryName },
-      });
-      const fetched = res.data as InterviewQuestion[];
-
-      setQuestions(res.data);
-      onQuestionsLoaded?.(fetched);
-    } catch (err) {
-      console.error("Error fetching interview questions:", err);
-    } finally {
-      setLoading(false);
+    if (propQuestions && propQuestions.length > 0) {
+      setQuestions(propQuestions);
     }
-  };
+  }, [propQuestions]);
 
   // Reset logic
   useEffect(() => {

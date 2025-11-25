@@ -283,3 +283,51 @@ export const getFollowStats = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/**
+ * @desc Get follow status for multiple users in bulk
+ * @route GET /api/follows/status/bulk?ids=userId1,userId2,userId3
+ * @access Private
+ */
+export const getBulkFollowStatus = async (req: Request, res: Response) => {
+  try {
+    const followerId = req.user?.id;
+    const idsParam = req.query.ids as string;
+
+    if (!followerId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!idsParam) {
+      return res.status(400).json({ message: "Missing 'ids' query parameter" });
+    }
+
+    // Parse comma-separated user IDs
+    const userIds = idsParam.split(",").map((id) => id.trim()).filter(Boolean);
+
+    if (userIds.length === 0) {
+      return res.json({});
+    }
+
+    // Single database query to get all follow relationships
+    const follows = await Follow.find({
+      follower: followerId,
+      following: { $in: userIds },
+    }).select("following").lean();
+
+    // Create a Set of user IDs that the current user is following
+    const followingSet = new Set(follows.map((f: any) => f.following.toString()));
+
+    // Build the response object mapping each userId to follow status
+    const statusMap: Record<string, boolean> = {};
+    for (const userId of userIds) {
+      statusMap[userId] = followingSet.has(userId);
+    }
+
+    res.json(statusMap);
+  } catch (err: any) {
+    console.error("Error getting bulk follow status:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+

@@ -7,6 +7,7 @@ import {
   getFollowStatus,
   getFollowSuggestions,
   getFollowStats,
+  getBulkFollowStatus,
 } from "../controllers/followController";
 import { authenticated } from "../middleware/auth";
 
@@ -34,6 +35,11 @@ router.get("/followers/:userId", getFollowers);
 // @desc    Get users that a user is following
 // @access  Private
 router.get("/following/:userId", getFollowing);
+
+// @route   GET /api/follows/status/bulk
+// @desc    Get follow status for multiple users in bulk
+// @access  Private
+router.get("/status/bulk", getBulkFollowStatus);
 
 // @route   GET /api/follows/status/:userId
 // @desc    Check if current user follows a specific user

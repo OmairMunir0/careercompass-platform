@@ -116,7 +116,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
       const replyContent = replyText;
       setReplyTexts((prev) => ({ ...prev, [commentId]: "" }));
       setReplyingTo(null);
-      
+
       // Optimistic update handled by parent component
       try {
         await onReply(id, commentId, replyContent);
@@ -155,14 +155,14 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100 hover:ring-purple-300 transition-all cursor-pointer"
         >
           {(user.profileImage || user.imageUrl) ? (
-            <Image 
+            <Image
               src={(() => {
                 const imgUrl = user.profileImage || user.imageUrl || '';
                 return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
               })()}
-              alt={`${user.firstName} ${user.lastName}`} 
-              width={48} 
-              height={48} 
+              alt={`${user.firstName} ${user.lastName}`}
+              width={48}
+              height={48}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -179,7 +179,7 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           <div className="text-xs text-gray-500">{formattedDate}</div>
         </button>
         {isCurrentUserPost && (
-          <button 
+          <button
             onClick={() => onDelete(id)}
             className="text-gray-400 hover:text-red-500"
           >
@@ -230,10 +230,10 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                     {jobMeta.salaryMin != null && jobMeta.salaryMax != null
                       ? `Salary: ${jobMeta.salaryMin} - ${jobMeta.salaryMax}`
                       : jobMeta.salaryMin != null
-                      ? `Salary: ${jobMeta.salaryMin}`
-                      : jobMeta.salaryMax != null
-                      ? `Salary: ${jobMeta.salaryMax}`
-                      : ""}
+                        ? `Salary: ${jobMeta.salaryMin}`
+                        : jobMeta.salaryMax != null
+                          ? `Salary: ${jobMeta.salaryMax}`
+                          : ""}
                   </div>
                 )}
                 {Array.isArray(jobMeta.requiredSkills) && jobMeta.requiredSkills.length > 0 && (
@@ -269,9 +269,9 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
       {/* Post Image */}
       {imageUrl && (
         <div className="w-full">
-          <img 
+          <img
             src={imageUrl.startsWith('http') ? imageUrl : `http://localhost:3001${imageUrl}`}
-            alt="Post image" 
+            alt="Post image"
             className="w-full object-cover max-h-96"
           />
         </div>
@@ -279,15 +279,15 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
 
       {/* Post Stats */}
       <div className="px-5 py-3 border-t border-gray-100 flex justify-between text-sm">
-        <button 
+        <button
           onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-1.5 text-gray-600 hover:text-purple-600 transition-colors font-medium"
         >
           <ThumbsUp size={16} className={isLiked ? "text-purple-600 fill-purple-600" : "text-gray-500"} />
           <span>{likes} {likes === 1 ? 'like' : 'likes'}</span>
         </button>
-        <button 
-          onClick={() => setShowComments(!showComments)} 
+        <button
+          onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-1.5 text-gray-600 hover:text-purple-600 transition-colors font-medium"
         >
           <MessageSquare size={16} className="text-gray-500" />
@@ -297,21 +297,21 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
 
       {/* Post Actions */}
       <div className="px-5 py-2.5 flex justify-around border-b border-gray-100 bg-gray-50/50">
-        <button 
-          onClick={() => onLike(id)} 
+        <button
+          onClick={() => onLike(id)}
           className={`flex items-center justify-center py-2.5 px-6 rounded-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 ${isLiked ? 'text-purple-600 font-semibold' : 'text-gray-600 hover:text-purple-600'}`}
         >
           <ThumbsUp size={20} className={`mr-2 ${isLiked ? 'fill-purple-600 text-purple-600' : ''}`} />
           <span className="font-medium">Like</span>
         </button>
-        <button 
+        <button
           onClick={() => setShowComments(!showComments)}
           className="flex items-center justify-center py-2.5 px-6 rounded-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 text-gray-600 hover:text-purple-600"
         >
           <MessageSquare size={20} className="mr-2" />
           <span className="font-medium">Comment</span>
         </button>
-        <button 
+        <button
           onClick={() => setShowShareModal(true)}
           className="flex items-center justify-center py-2.5 px-6 rounded-lg hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 text-gray-600 hover:text-purple-600"
         >
@@ -327,11 +327,11 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
           <form onSubmit={handleCommentSubmit} className="flex items-center gap-3 mb-4">
             <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
               {currentUser?.profileImage ? (
-                <Image 
+                <Image
                   src={currentUser.profileImage.startsWith('http') ? currentUser.profileImage : `http://localhost:3001${currentUser.profileImage}`}
-                  alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`} 
-                  width={40} 
-                  height={40} 
+                  alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`}
+                  width={40}
+                  height={40}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -348,8 +348,8 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
               disabled={isSubmittingComment}
               className="flex-grow px-4 py-2.5 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={!commentText.trim() || isSubmittingComment}
               className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-sm font-medium hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-2"
             >
@@ -376,11 +376,11 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                   className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100 hover:ring-purple-300 transition-all cursor-pointer"
                 >
                   {comment.user?.profileImage ? (
-                    <Image 
+                    <Image
                       src={comment.user.profileImage.startsWith('http') ? comment.user.profileImage : `http://localhost:3001${comment.user.profileImage}`}
-                      alt={`${comment.user?.firstName || ""} ${comment.user?.lastName || ""}`} 
-                      width={40} 
-                      height={40} 
+                      alt={`${comment.user?.firstName || ""} ${comment.user?.lastName || ""}`}
+                      width={40}
+                      height={40}
                       className="object-cover"
                     />
                   ) : (
@@ -420,11 +420,11 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                     <form onSubmit={(e) => handleReplySubmit(e, comment._id || "")} className="mt-3 flex items-center gap-2">
                       <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
                         {currentUser?.profileImage ? (
-                          <Image 
-                            src={currentUser.profileImage} 
-                            alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`} 
-                            width={32} 
-                            height={32} 
+                          <Image
+                            src={currentUser.profileImage}
+                            alt={`${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`}
+                            width={32}
+                            height={32}
                             className="object-cover"
                           />
                         ) : (
@@ -442,8 +442,8 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                         className="flex-grow px-4 py-2 bg-white border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         autoFocus
                       />
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         disabled={!replyTexts[comment._id || ""]?.trim() || isSubmittingReply[comment._id || ""]}
                         className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-full text-sm font-medium hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-2"
                       >
@@ -479,11 +479,11 @@ const TimelinePost: React.FC<TimelinePostProps> = ({
                             className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-purple-100 hover:ring-purple-300 transition-all cursor-pointer"
                           >
                             {reply.user?.profileImage ? (
-                              <Image 
+                              <Image
                                 src={reply.user.profileImage.startsWith('http') ? reply.user.profileImage : `http://localhost:3001${reply.user.profileImage}`}
-                                alt={`${reply.user?.firstName || ""} ${reply.user?.lastName || ""}`} 
-                                width={32} 
-                                height={32} 
+                                alt={`${reply.user?.firstName || ""} ${reply.user?.lastName || ""}`}
+                                width={32}
+                                height={32}
                                 className="object-cover"
                               />
                             ) : (

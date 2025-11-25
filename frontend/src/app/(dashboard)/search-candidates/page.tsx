@@ -145,18 +145,21 @@ const CandidateSearch: React.FC = () => {
   useEffect(() => {
     const loadFollowStatuses = async () => {
       if (!user?._id || filteredUsers.length === 0) return;
-      
+
       try {
-        const statusMap: Record<string, boolean> = {};
-        
-        for (const candidate of filteredUsers) {
-          if (candidate._id === user._id) continue;
-          
-          const { data } = await axiosInstance.get(`/follows/status/${candidate._id}`);
-          statusMap[candidate._id] = data.isFollowing || false;
+        // Filter out current user and get list of user IDs
+        const userIds = filteredUsers
+          .filter((candidate) => candidate._id !== user._id)
+          .map((candidate) => candidate._id);
+
+        if (userIds.length === 0) {
+          setFollowStatus({});
+          return;
         }
-        
-        setFollowStatus(statusMap);
+
+        // Single bulk API call instead of N individual calls
+        const { data } = await axiosInstance.get(`/follows/status/bulk?ids=${userIds.join(',')}`);
+        setFollowStatus(data);
       } catch (err) {
         console.error("Failed to load follow statuses:", err);
       }
@@ -182,18 +185,21 @@ const CandidateSearch: React.FC = () => {
   // Load experiences for users
   useEffect(() => {
     const loadExperiences = async () => {
+      if (users.length === 0) return;
+
       try {
-        const exps: Record<string, UserExperienceData[]> = {};
-        for (const u of users) {
-          const { data } = await axiosInstance.get(`/user-experiences/user/${u._id}`);
-          exps[u._id] = data;
-        }
-        setExperiences(exps);
+        // Get all user IDs
+        const userIds = users.map((u) => u._id);
+
+        // Single bulk API call instead of N individual calls
+        const { data } = await axiosInstance.get(`/user-experiences/bulk?userIds=${userIds.join(',')}`);
+        setExperiences(data);
       } catch (err) {
         console.error("Failed to load user experiences:", err);
       }
     };
-    if (users.length > 0) loadExperiences();
+
+    loadExperiences();
   }, [users]);
 
   // Filter by location
@@ -246,6 +252,8 @@ const CandidateSearch: React.FC = () => {
       </div>
     );
   }
+
+  console.log(applications);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -306,15 +314,14 @@ const CandidateSearch: React.FC = () => {
                     </div>
 
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        /pending/i.test(app.status.name)
-                          ? "bg-yellow-100 text-yellow-800"
-                          : /accepted|approved/i.test(app.status.name)
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${/pending/i.test(app.status.name)
+                        ? "bg-yellow-100 text-yellow-800"
+                        : /accepted|approved/i.test(app.status.name)
                           ? "bg-green-100 text-green-800"
                           : /rejected|declined/i.test(app.status.name)
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
                     >
                       {app.status.name}
                     </span>
@@ -341,10 +348,10 @@ const CandidateSearch: React.FC = () => {
                     {app.resumeUrl ? (<>
                       {console.log(app.resumeUrl)}
                       <a
-                      href={app.resumeUrl.startsWith("http") ? app.resumeUrl : `http://localhost:3001/${app.resumeUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                        href={app.resumeUrl.startsWith("http") ? app.resumeUrl : `http://localhost:3001/${app.resumeUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                       >
                         View Resume
                       </a></>
@@ -426,11 +433,10 @@ const CandidateSearch: React.FC = () => {
                     {u._id !== user?._id && (
                       <button
                         onClick={() => handleFollowToggle(u._id)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${
-                          followStatus[u._id]
-                            ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${followStatus[u._id]
+                          ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
                       >
                         {followStatus[u._id] ? (
                           <>

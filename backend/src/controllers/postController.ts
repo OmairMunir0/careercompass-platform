@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { Post } from "../models/Post";
 import { User } from "../models/User";
+import { Follow } from "../models/Follow";
 import {
   FREE_CHARACTER_LIMIT,
   getCharacterLimitForUser,
@@ -84,11 +85,21 @@ export const getAllPosts = async (req: Request, res: Response) => {
       return res.status(200).json(cached);
     }
 
-    // Fetch ALL normal posts (no pagination yet)
+    // 0. Get Recommended Posts (Random)
+    
+    // 1. Get list of people the current user follows
+    const follows = await Follow.find({ follower: userId }).select("following");
+    const followingIds = follows.map(f => f.following);
+    
+    // 2. Include current user's own ID
+    const userIdsForFeed = [...followingIds, userId];
+
+    // 3. Get posts
     const normal_posts = await Post.find({
       type: { $exists: false },
       jobMeta: { $exists: false },
       jobPostId: { $exists: false },
+      user: { $in: userIdsForFeed }
     })
       .populate("user", "firstName lastName email imageUrl")
       .populate({
@@ -127,7 +138,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
           ...job,
           // isRecommendedJob: true, 
         };
-
+        
         // insert job at this position
         posts.splice(insertIndex, 0, jobPost);
 
@@ -138,13 +149,13 @@ export const getAllPosts = async (req: Request, res: Response) => {
         }
       }
     }
-
+    
     // Calculate total before pagination
     const total = posts.length;
-
+    
     // Apply pagination to merged posts
     const paginatedPosts = posts.slice(skip, skip + limit);
-
+    
     // Handle backward compatibility: likes can be number (old) or array (new)
     // Add isLiked flag for authenticated users
     const postsWithLikedStatus = paginatedPosts.map((post: any) => {

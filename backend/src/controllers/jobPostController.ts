@@ -63,12 +63,12 @@ export const createJobPost = async (req: Request, res: Response) => {
 
       const content = [
         `New Job: ${title}`,
+        `Description: ${description}`,
         // location ? `Location: ${location}` : null,
         // `Type: ${jt?.name ?? "N/A"} | Work Mode: ${wm?.name ?? "N/A"} | Experience: ${exp?.name ?? "N/A"}`,
         // `Salary: ${salaryMin} - ${salaryMax}`,
         // skillsText ? `Skills: ${skillsText}` : null,
         // applicationEmail ? `Apply via Email: ${applicationEmail}` : null,
-        `Description: ${description}`,
       ].filter(Boolean).join("\n");
 
       const timelinePost = await Post.create({

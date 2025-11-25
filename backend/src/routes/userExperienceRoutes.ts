@@ -6,6 +6,7 @@ import {
   getMyExperiences,
   getUserExperiences,
   updateExperience,
+  getBulkUserExperiences,
 } from "../controllers/userExperienceController";
 import { authenticated } from "../middleware/auth";
 
@@ -17,6 +18,7 @@ router.post("/", createExperience);
 router.put("/:experienceId", updateExperience);
 router.delete("/:experienceId", deleteExperience);
 
+router.get("/bulk", getBulkUserExperiences);
 router.get("/user/:userId", getUserExperiences);
 router.get("/:experienceId", getExperience);
 

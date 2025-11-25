@@ -22,6 +22,9 @@ import {
   workModesData,
   interviewQuestionsData,
   followsData,
+  userSkillsData,
+  notificationsData,
+  blogsData,
 } from "../data";
 
 import {
@@ -46,6 +49,9 @@ import {
   InterviewQuestion,
 } from "../models";
 import { Follow } from "../models/Follow";
+import { UserSkill } from "../models/UserSkill";
+import { Notification } from "../models/Notification";
+import { Blog } from "../models/Blog";
 
 export async function seedChats() {
   for (const chat of chatData) {
@@ -165,7 +171,7 @@ export async function seedJobPosts() {
     const skills = await Skill.find({ name: { $in: jp.requiredSkills } });
     const skillIds = skills.map((s) => s._id);
 
-    await JobPost.create({
+    const job = await JobPost.create({
       recruiter: recruiter._id,
       title: jp.title,
       description: jp.description,
@@ -180,6 +186,46 @@ export async function seedJobPosts() {
     });
 
     console.log(`Created job post: '${jp.title}' with ${skillIds.length} required skills`);
+
+    // Create corresponding timeline post (matching createJobPost controller logic)
+    try {
+      const baseUrl = process.env.FRONTEND_URL || process.env.APP_BASE_URL || "http://localhost:3000";
+      const skillsText = skills.map((s) => s.name).join(", ");
+      const viewUrl = `${baseUrl}/find-jobs/${job._id}`;
+
+      const content = [
+        `New Job: ${jp.title}`,
+        `Description: ${jp.description}`,
+      ].filter(Boolean).join("\n");
+
+      const timelinePost = await Post.create({
+        user: recruiter._id,
+        content,
+        imageUrl: null,
+        type: "job",
+        jobPostId: job._id,
+        jobMeta: {
+          title: jp.title,
+          location: jp.location ?? null,
+          salaryMin: jp.salaryMin,
+          salaryMax: jp.salaryMax,
+          jobType: jobType?.name ?? null,
+          workMode: workMode?.name ?? null,
+          experienceLevel: experienceLevel?.name ?? null,
+          requiredSkills: skills.map((s) => s.name),
+          url: viewUrl,
+          applicationEmail: jp.applicationEmail ?? null,
+        },
+      });
+
+      // Update job post with timeline post reference
+      job.timelinePostId = timelinePost._id as any;
+      await job.save();
+
+      console.log(`Created timeline post for job: '${jp.title}'`);
+    } catch (postErr) {
+      console.error(`Failed to create timeline post for job '${jp.title}':`, postErr);
+    }
   }
 
   console.log("Job posts seeding complete.");
@@ -230,7 +276,7 @@ export async function seedPosts() {
       user: user._id,
       content: p.content,
       imageUrl: p.imageUrl,
-      likes: p.likes,
+      likes: [], // Initialize as empty array, will be populated later if needed
       comments,
       createdAt: p.createdAt,
       updatedAt: p.createdAt,
@@ -360,14 +406,6 @@ async function seedUsers(roles: Record<string, mongoose.Types.ObjectId>) {
       ...u,
       passwordHash,
       roleId: roles[u.role],
-      publicEmail: null,
-      location: "Remote",
-      phone: null,
-      linkedinUrl: null,
-      portfolioUrl: null,
-      companyName: null,
-      companyWebsite: null,
-      imageUrl: null,
     });
 
     console.log(`Created user: ${user.email}`);
@@ -559,7 +597,104 @@ export async function seedFollows() {
   console.log("Follow relationships seeding complete.");
 }
 
+export async function seedUserSkills() {
+  for (const us of userSkillsData) {
+    const user = await User.findOne({ email: us.userEmail });
+    const skill = await Skill.findOne({ name: us.skillName });
+    const proficiencyLevel = await ProficiencyLevel.findOne({ name: us.proficiencyLevel });
 
+    if (!user || !skill) {
+      console.error(
+        `Cannot create user skill. User: ${us.userEmail}, Skill: ${us.skillName}`
+      );
+      continue;
+    }
+
+    const exists = await UserSkill.findOne({
+      user: user._id,
+      skillId: skill._id,
+    });
+
+    if (exists) {
+      console.log(
+        `User skill already exists: ${us.userEmail} - ${us.skillName}. Skipping.`
+      );
+      continue;
+    }
+
+    await UserSkill.create({
+      user: user._id,
+      skillId: skill._id,
+      proficiencyLevelId: proficiencyLevel?._id || null,
+    });
+
+    console.log(`Created user skill: ${us.userEmail} - ${us.skillName}`);
+  }
+
+  console.log("User skills seeding complete.");
+}
+
+export async function seedNotifications() {
+  for (const notif of notificationsData) {
+    const user = await User.findOne({ email: notif.userEmail });
+
+    if (!user) {
+      console.error(`User ${notif.userEmail} not found. Skipping notification.`);
+      continue;
+    }
+
+    await Notification.create({
+      user: user._id,
+      type: notif.type,
+      title: notif.title,
+      message: notif.message,
+      isRead: notif.isRead,
+      createdAt: notif.createdAt,
+    });
+
+    console.log(`Created notification for ${notif.userEmail}: ${notif.title}`);
+  }
+
+  console.log("Notifications seeding complete.");
+}
+
+export async function seedBlogs() {
+  for (const blog of blogsData) {
+    const author = await User.findOne({ email: blog.authorEmail });
+
+    if (!author) {
+      console.error(`Author ${blog.authorEmail} not found. Skipping blog.`);
+      continue;
+    }
+
+    const exists = await Blog.findOne({
+      author: author._id,
+      title: blog.title,
+    });
+
+    if (exists) {
+      console.log(`Blog '${blog.title}' already exists. Skipping.`);
+      continue;
+    }
+
+    await Blog.create({
+      title: blog.title,
+      content: blog.content,
+      author: author._id,
+      authorName: `${author.firstName} ${author.lastName}`,
+      authorAvatar: author.imageUrl,
+      image: blog.image,
+      tags: blog.tags,
+      likes: [],
+      comments: [],
+      createdAt: blog.createdAt,
+    });
+
+    console.log(`Created blog: ${blog.title} by ${blog.authorEmail}`);
+  }
+
+  console.log("Blogs seeding complete.");
+}
 
 export async function runSeed() {
   const mongoUri = process.env.MONGO_URI;
@@ -572,24 +707,38 @@ export async function runSeed() {
     const roles = await seedRoles();
     const categoriesMap = await seedSkillCategories();
 
-    await seedChats();
-    await seedJobApplications();
-    await seedJobApplicationStatuses();
-    await seedJobPosts();
-    await seedJobTypes();
-    await seedPosts();
-    await seedProficiencyLevels();
-    await seedUsers(roles);
-    await seedUserEducation();
-    await seedUserExperience();
+    // Seed reference data first
     await seedExperienceLevels();
+    await seedJobApplicationStatuses();
+    await seedJobTypes();
+    await seedProficiencyLevels();
     await seedShortlistStatuses();
     await seedSkills(categoriesMap);
     await seedWorkModes();
-    await seedSavedJobs();
+
+    // Seed users
+    await seedUsers(roles);
+
+    // Seed user-related data
+    await seedUserEducation();
+    await seedUserExperience();
     await seedUserCertifications();
-    await seedInterviewQuestions();
+    await seedUserSkills();
+
+    // Seed posts and jobs
+    await seedPosts();
+    await seedJobPosts();
+    await seedBlogs();
+
+    // Seed interactions
     await seedFollows();
+    await seedChats();
+    await seedJobApplications();
+    await seedSavedJobs();
+    await seedNotifications();
+
+    // Seed interview questions
+    await seedInterviewQuestions();
 
     console.log("Seeding complete.");
   } catch (err) {

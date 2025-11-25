@@ -18,3 +18,6 @@ export { usersData } from "./usersData";
 export { workModesData } from "./workModesData";
 export { interviewQuestionsData } from "./interviewQuestionsData";
 export { followsData } from "./followData";
+export { userSkillsData } from "./userSkillsData";
+export { notificationsData } from "./notificationsData";
+export { blogsData } from "./blogsData";

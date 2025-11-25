@@ -130,3 +130,52 @@ export const getExperience = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/**
+ * @desc Get experiences for multiple users in bulk
+ * @route GET /api/user-experiences/bulk?userIds=id1,id2,id3
+ * @access Private
+ */
+export const getBulkUserExperiences = async (req: Request, res: Response) => {
+  try {
+    const userIdsParam = req.query.userIds as string;
+
+    if (!userIdsParam) {
+      return res.status(400).json({ message: "Missing 'userIds' query parameter" });
+    }
+
+    // Parse comma-separated user IDs
+    const userIds = userIdsParam.split(",").map((id) => id.trim()).filter(Boolean);
+
+    if (userIds.length === 0) {
+      return res.json({});
+    }
+
+    // Single database query to get all experiences for all users
+    const experiences = await UserExperience.find({
+      user: { $in: userIds },
+    }).sort({ startDate: -1 }).lean();
+
+    // Group experiences by user ID
+    const experiencesMap: Record<string, any[]> = {};
+
+    // Initialize empty arrays for all requested user IDs
+    for (const userId of userIds) {
+      experiencesMap[userId] = [];
+    }
+
+    // Populate the map with experiences
+    for (const exp of experiences) {
+      const userId = exp.user.toString();
+      if (experiencesMap[userId]) {
+        experiencesMap[userId].push(exp);
+      }
+    }
+
+    res.json(experiencesMap);
+  } catch (err: any) {
+    console.error("Error getting bulk user experiences:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
