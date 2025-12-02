@@ -1,4 +1,4 @@
-# app/utils/analysis.py   ← REPLACE YOUR WHOLE FILE WITH THIS
+# app/utils/analysis.py - OpenAI Whisper API version
 
 from __future__ import annotations
 import os
@@ -6,7 +6,7 @@ import tempfile
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
-import whisper
+import openai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,16 +17,8 @@ ANSWER_TIME = int(os.getenv("ANSWER_TIME", "40"))
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-_whisper_model = None
-
-def get_whisper_model():
-    """Load Whisper 'base' model ONCE at startup (called from lifespan)"""
-    global _whisper_model
-    if _whisper_model is None:
-        print("[Whisper] Loading 'base' model... (this takes ~10–20 seconds once)")
-        _whisper_model = whisper.load_model("base")
-        print("[Whisper] Model loaded and ready for transcription! 🎤")
-    return _whisper_model
+# Initialize OpenAI client
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # === 1. Save uploaded video ===
@@ -75,24 +67,31 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     
     segment_duration = float(segment_duration)
 
-    model = get_whisper_model() 
-
-    print("[Whisper] Starting transcription...")
-    result = model.transcribe(audio_path, word_timestamps=True)
-    full_transcript = result["text"].strip()
-
-    segments = result["segments"]
+    print("[Whisper API] Starting transcription...")
+    
+    # Use OpenAI Whisper API with timestamps
+    with open(audio_path, "rb") as audio_file:
+        result = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            response_format="verbose_json",
+            timestamp_granularities=["segment"]
+        )
+    
+    full_transcript = result.text.strip()
+    segments = result.segments or []
+    
     num_chunks = 10
     chunks = [""] * num_chunks
 
     for seg in segments:
-        start = float(seg["start"])
-        text = seg["text"].strip()
+        start = float(seg.get("start", 0))
+        text = seg.get("text", "").strip()
         bucket_idx = min(int(start // segment_duration), num_chunks - 1)
         chunks[bucket_idx] += " " + text
 
     chunks = [c.strip() or "[silent]" for c in chunks]
-    print(f"[Whisper] Transcription complete → {len(chunks)} chunks")
+    print(f"[Whisper API] Transcription complete → {len(chunks)} chunks")
 
     return full_transcript, chunks
 

@@ -1,47 +1,41 @@
-# app/utils/accuracy.py   ← REPLACE YOUR WHOLE FILE WITH THIS
+# app/utils/accuracy.py - OpenAI Embeddings API version
 
 from __future__ import annotations
 import os
-from datetime import datetime
 from typing import List, Tuple, Dict
 import numpy as np
-from sentence_transformers import SentenceTransformer
+import openai
+from dotenv import load_dotenv
 
-# ----------------------------------------------------------------------
-# 1. GLOBAL MODEL (singleton) – THIS IS THE KEY
-# ----------------------------------------------------------------------
-_MODEL: SentenceTransformer | None = None
-_DEFAULT_MODEL = os.getenv("MODEL_NAME", "intfloat/e5-large-v2")
-_DEFAULT_PREFIX = "query: "
+load_dotenv()
+
+# Initialize OpenAI client
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+EMBEDDING_MODEL = "text-embedding-3-small"
 THRESHOLD = 0.75
 
-def _load_model(model_name: str | None = None, device: str | None = None) -> SentenceTransformer:
-    global _MODEL
-    if _MODEL is None:
-        name = model_name or _DEFAULT_MODEL
-        print(f"[accuracy.py] Loading accuracy model '{name}'...", end="", flush=True)
-        _MODEL = SentenceTransformer(name, device=device)
-        print(" Done! Model ready for answer similarity.")
-    return _MODEL
+# ----------------------------------------------------------------------
+# OpenAI Embeddings helper
+# ----------------------------------------------------------------------
+def get_embeddings(texts: List[str]) -> np.ndarray:
+    """Get embeddings from OpenAI API"""
+    response = client.embeddings.create(
+        model=EMBEDDING_MODEL,
+        input=texts
+    )
+    return np.array([item.embedding for item in response.data])
 
 # ----------------------------------------------------------------------
-# 2. Core class (unchanged logic, just uses global model)
+# Core class using OpenAI Embeddings
 # ----------------------------------------------------------------------
 class TextSimilarity:
-    def __init__(self, model_name: str | None = None, device: str | None = None, prefix: str = _DEFAULT_PREFIX):
-        self.model = _load_model(model_name, device)  # ← uses global _MODEL
-        self.prefix = prefix
-
-    def _add_prefix(self, texts: List[str]) -> List[str]:
-        return [f"{self.prefix}{t}" for t in texts]
-
-    def embed(self, texts: List[str]) -> np.ndarray:
-        prefixed = self._add_prefix(texts)
-        return self.model.encode(prefixed, normalize_embeddings=True, batch_size=32, show_progress_bar=False)
-
     @staticmethod
     def cosine(a: np.ndarray, b: np.ndarray) -> float:
-        return float(np.dot(a, b))
+        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        return get_embeddings(texts)
 
     def similarity(self, ref: str, user: str) -> float:
         emb = self.embed([ref, user])
@@ -51,12 +45,12 @@ class TextSimilarity:
         refs, users = zip(*pairs)
         emb = self.embed(list(refs) + list(users))
         split = len(pairs)
-        return [float(np.dot(r, u)) for r, u in zip(emb[:split], emb[split:])]
+        return [self.cosine(r, u) for r, u in zip(emb[:split], emb[split:])]
 
 # ----------------------------------------------------------------------
-# 3. Public API (same as before)
+# Public API
 # ----------------------------------------------------------------------
-_similarity = TextSimilarity()  # default instance
+_similarity = TextSimilarity()
 
 def get_similarity(ref: str, user: str) -> float:
     return _similarity.similarity(ref, user)

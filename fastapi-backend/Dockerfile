@@ -3,20 +3,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for whisper, ffmpeg, and ML libraries
+# Install system dependencies (ffmpeg for audio extraction)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    git \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching (CapRover builds from repo root)
 COPY ./fastapi-backend/requirements.txt .
 
-# Install PyTorch CPU version first (smaller, faster)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
-# Install Python dependencies
+# Install Python dependencies (lightweight - no ML models)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

@@ -2,24 +2,11 @@
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 
-# OpenAI API (for cloud whisper)
+# OpenAI API (Whisper + Embeddings)
 openai>=1.51.0
-
-# Speech Recognition
-SpeechRecognition>=3.10.0
-openai-whisper>=20231117
-
-# ML / Transformers
-transformers>=4.45.0
-sentence-transformers>=3.2.0
-# torch installed separately in Dockerfile for CPU
 
 # Utilities
 numpy<2.0.0
-pandas>=2.2.0
-matplotlib>=3.9.0
-tqdm>=4.66.5
-language-tool-python>=2.8.2
 python-dotenv>=1.0.1
 
 # Misc

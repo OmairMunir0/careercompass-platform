@@ -1,23 +1,32 @@
-# app/utils/job_post_score.py
+# app/utils/job_post_score.py - OpenAI Embeddings API version
 
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from typing import List, Dict, Any, Optional
+import openai
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
-AI_MODEL = os.getenv("AI_REC_MODEL_NAME", "all-MiniLM-L6-v2")
 
-# Global model — loaded once in lifespan
-rec_model = None
+# Initialize OpenAI client
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def load_rec_model():
-    global rec_model
-    print("[JobPostScore] Loading recommendation model...")
-    rec_model = SentenceTransformer(AI_MODEL)
-    print("[JobPostScore] Model loaded successfully!")
+# Use text-embedding-3-small - cheapest at $0.00002/1K tokens
+EMBEDDING_MODEL = "text-embedding-3-small"
+
+def get_embeddings(texts: List[str]) -> np.ndarray:
+    """Get embeddings from OpenAI API"""
+    response = client.embeddings.create(
+        model=EMBEDDING_MODEL,
+        input=texts
+    )
+    return np.array([item.embedding for item in response.data])
+
+def cosine_similarity_vectors(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Compute cosine similarity between vector a and matrix b"""
+    a_norm = a / np.linalg.norm(a, axis=1, keepdims=True)
+    b_norm = b / np.linalg.norm(b, axis=1, keepdims=True)
+    return np.dot(a_norm, b_norm.T)
 
 # FINAL TEXT BUILDERS – Matches your Colab EXACTLY
 _user_text_template = """
@@ -71,20 +80,20 @@ def get_recommended_jobs_for_user(
     min_score: float = 0.40
 ) -> List[Dict[str, Any]]:
 
-    global rec_model
-    if rec_model is None:
-        raise RuntimeError("Recommendation model not loaded!")
-
     if not jobposts:
         return []
 
     user_text = build_user_text(user)
-    user_embedding = rec_model.encode([user_text])
-
     job_texts = [build_job_text(job) for job in jobposts]
-    job_embeddings = rec_model.encode(job_texts)
+    
+    # Get all embeddings in one API call for efficiency
+    all_texts = [user_text] + job_texts
+    all_embeddings = get_embeddings(all_texts)
+    
+    user_embedding = all_embeddings[0:1]  # Keep 2D shape
+    job_embeddings = all_embeddings[1:]
 
-    similarities = cosine_similarity(user_embedding, job_embeddings)[0]
+    similarities = cosine_similarity_vectors(user_embedding, job_embeddings)[0]
 
     results = []
     user_skills_lower = {s.lower() for s in user.get('skills', [])}
