@@ -13,7 +13,6 @@ import {
   urlencodedMiddleware,
 } from "./middleware/server";
 import routes from "./routes";
-import cors from "cors";
 
 const uploadsPath = path.join(process.cwd(), "uploads");
 
@@ -31,12 +30,6 @@ app.use(rateLimitMiddleware);
 app.use(compressionMiddleware);
 app.use(objectIdParamsMiddleware);
 app.use("/uploads", express.static(uploadsPath));
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  })
-);
 
 // Convert req.params to ObjectIds
 app.use((req: Request, _res: Response, next: NextFunction) => {
