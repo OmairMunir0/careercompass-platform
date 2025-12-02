@@ -19,6 +19,9 @@ const uploadsPath = path.join(process.cwd(), "uploads");
 
 const app = express();
 
+// Trust proxy for rate limiting behind reverse proxy (nginx, etc.)
+app.set("trust proxy", 1);
+
 app.use(corsMiddleware);
 app.use(helmetMiddleware);
 app.use(morganMiddleware);
@@ -28,16 +31,21 @@ app.use(rateLimitMiddleware);
 app.use(compressionMiddleware);
 app.use(objectIdParamsMiddleware);
 app.use("/uploads", express.static(uploadsPath));
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 // Convert req.params to ObjectIds
 app.use((req: Request, _res: Response, next: NextFunction) => {
   const params = req.params as Record<string, any>;
   for (const key in params) {
-    if (typeof params[key] === "string" && mongoose.Types.ObjectId.isValid(params[key])) {
+    if (
+      typeof params[key] === "string" &&
+      mongoose.Types.ObjectId.isValid(params[key])
+    ) {
       params[key] = new mongoose.Types.ObjectId(params[key]);
     }
   }
