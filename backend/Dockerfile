@@ -13,5 +13,5 @@ COPY ./backend/ .
 # Expose port
 EXPOSE 3001
 
-# Run seed then start the server (REMOVE SEED AFTER FIRST DEPLOY)
-CMD ["sh", "-c", "npx tsx src/scripts/seed.ts && npx tsx src/server.ts"]
+# Start server
+CMD ["npx", "tsx", "src/server.ts"]
