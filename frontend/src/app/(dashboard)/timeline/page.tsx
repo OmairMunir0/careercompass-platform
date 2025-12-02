@@ -1,0 +1,557 @@
+"use client";
+
+import axiosInstance from "@/lib/axiosInstance";
+import { useAuthStore } from "@/store/authStore";
+import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
+import TimelinePost from "@/components/TimelinePost";
+import PostComposer from "@/components/PostComposer";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import UserProfileCard from "@/components/UserProfileCard";
+import RightSidebar from "@/components/RightSidebar";
+import NotificationCenter from "@/components/NotificationCenter";
+import { billingService } from "@/services/billingService";
+import { useWebPush } from "@/hooks/useWebPush";
+
+interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profileImage?: string;
+  imageUrl?: string;
+}
+
+interface Reply {
+  _id?: string;
+  user: User;
+  content: string;
+  createdAt?: string;
+}
+
+interface Comment {
+  _id?: string;
+  user: User;
+  content: string;
+  replies?: Reply[];
+  createdAt?: string;
+}
+
+interface Post {
+  _id: string;
+  user: User;
+  content: string;
+  imageUrl?: string | null;
+  likes: number;
+  comments: Comment[];
+  createdAt: string;
+  type?: string;
+  jobPostId?: string;
+  jobMeta?: {
+    title?: string | null;
+    location?: string | null;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    jobType?: string | null;
+    workMode?: string | null;
+    experienceLevel?: string | null;
+    requiredSkills?: string[];
+    url?: string | null;
+    applicationEmail?: string | null;
+  };
+}
+
+const Timeline: React.FC = () => {
+  const { user } = useAuthStore();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const token = useAuthStore.getState().token;
+  const isPremiumPlan = Boolean((user as any)?.isPremiumActive);
+  const characterLimit = isPremiumPlan ? 2500 : 250;
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  // Initialize web push for Premium users
+  const { subscribe } = useWebPush();
+
+  useEffect(() => {
+    if (isPremiumPlan) {
+      // Request push notification permission and subscribe
+      subscribe();
+    }
+  }, [isPremiumPlan, subscribe]);
+
+  useEffect(() => {
+    fetchPosts(1);
+  }, []);
+
+  const fetchPosts = async (pageNumber = 1) => {
+    if (!hasMore && pageNumber !== 1) return;
+    try {
+      if (pageNumber === 1) setLoading(true);
+
+      const res = await axiosInstance.get(
+        `/posts?${
+          user?._id ? `userId=${user._id}` : ""
+        }&page=${pageNumber}&limit=5`
+      );
+
+      console.log("API Response:", res.data);
+
+      // Handle both new pagination format and old array format
+      const postsData = res.data.posts || res.data;
+      const paginationData = res.data.pagination;
+
+      const mappedPosts = postsData.map((post: any) => ({
+        ...post,
+        user: {
+          ...post.user,
+          profileImage: post.user.imageUrl || post.user.profileImage,
+        },
+        comments: post.comments.map((c: any) => ({
+          ...c,
+          user: {
+            ...c.user,
+            profileImage: c.user.imageUrl || c.user.profileImage,
+          },
+          replies: (c.replies || []).map((r: any) => ({
+            ...r,
+            user: {
+              ...r.user,
+              profileImage: r.user.imageUrl || r.user.profileImage,
+            },
+          })),
+        })),
+      }));
+
+      if (pageNumber === 1) {
+        setPosts(mappedPosts);
+      } else {
+        setPosts((prev) => [...prev, ...mappedPosts]);
+      }
+
+      // Update pagination state
+      if (paginationData) {
+        setHasMore(paginationData.hasMore);
+        console.log("Pagination:", paginationData);
+      } else {
+        // Fallback: if no pagination data, assume no more posts
+        setHasMore(false);
+      }
+
+      setPage(pageNumber);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      toast.error("Failed to load posts");
+    } finally {
+      setLoading(false);
+      setIsFetchingMore(false);
+    }
+  };
+
+  const loadMorePosts = () => {
+    if (isFetchingMore || !hasMore) return;
+    setIsFetchingMore(true);
+    fetchPosts(page + 1);
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) {
+      toast.error("Please sign in to upgrade.");
+      return;
+    }
+
+    try {
+      setIsUpgrading(true);
+      const baseUrl =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+      const successUrl = `${baseUrl}/billing/success`;
+      const cancelUrl = `${baseUrl}/billing/cancel`;
+
+      const response = await billingService.createCheckoutSession({
+        successUrl,
+        cancelUrl,
+      });
+      if (response?.url) {
+        window.location.href = response.url;
+      } else {
+        toast.error("Unable to start checkout session.");
+      }
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || "Unable to start checkout.";
+      toast.error(message);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const handlePost = async (content: string, imageFile: File | null) => {
+    if (!content.trim() && !imageFile) return;
+    if (content.trim().length > characterLimit) {
+      toast.error(
+        `Posts on the ${
+          isPremiumPlan ? "Premium" : "Free"
+        } plan are limited to ${characterLimit} characters.`
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("content", content.trim());
+      if (imageFile) formData.append("postImage", imageFile);
+
+      const res = await axiosInstance.post("/posts", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      setPosts((prev) => [res.data, ...prev]);
+      toast.success("Post created!");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || "Failed to create post.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (postId: string) => {
+    try {
+      await axiosInstance.delete(`/posts/${postId}`);
+      setPosts((prev) => prev.filter((p) => p._id !== postId));
+      toast.success("Post deleted!");
+    } catch {
+      toast.error("Failed to delete post.");
+    }
+  };
+
+  const toggleLike = async (postId: string) => {
+    const isLiked = likedPosts[postId];
+
+    try {
+      const res = await axiosInstance.put(
+        `/posts/${postId}/${isLiked ? "unlike" : "like"}`
+      );
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId ? { ...p, likes: res.data.likes } : p
+        )
+      );
+      setLikedPosts((prev) => ({
+        ...prev,
+        [postId]: res.data.isLiked ?? !isLiked,
+      }));
+    } catch {
+      toast.error("Failed to update like.");
+    }
+  };
+
+  const handleCommentSubmit = async (postId: string, content: string) => {
+    if (!content.trim() || !user) return;
+
+    // Optimistic update - add comment immediately
+    const optimisticComment: Comment = {
+      _id: `temp-${Date.now()}`,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileImage: (user as any).imageUrl || user.profileImage,
+      },
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      replies: [],
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._id === postId
+          ? { ...p, comments: [...p.comments, optimisticComment] }
+          : p
+      )
+    );
+
+    try {
+      const res = await axiosInstance.post(`/posts/${postId}/comments`, {
+        content,
+      });
+
+      // Replace optimistic comment with real one from server
+      const updatedPost = res.data.post;
+      const normalizedPost = {
+        ...updatedPost,
+        comments: updatedPost.comments.map((comment: Comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            firstName: comment.user?.firstName || "",
+            lastName: comment.user?.lastName || "",
+            email: comment.user?.email || "",
+          },
+          replies: (comment.replies || []).map((reply: Reply) => ({
+            ...reply,
+            user: {
+              ...reply.user,
+              firstName: reply.user?.firstName || "",
+              lastName: reply.user?.lastName || "",
+              email: reply.user?.email || "",
+            },
+          })),
+        })),
+      };
+
+      setPosts((prev) =>
+        prev.map((p) => (p._id === postId ? normalizedPost : p))
+      );
+
+      toast.success("Comment added!");
+    } catch {
+      // Remove optimistic comment on error
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId
+            ? {
+                ...p,
+                comments: p.comments.filter(
+                  (c) => c._id !== optimisticComment._id
+                ),
+              }
+            : p
+        )
+      );
+      toast.error("Failed to add comment.");
+    }
+  };
+
+  const handleReplySubmit = async (
+    postId: string,
+    commentId: string,
+    content: string
+  ) => {
+    if (!content.trim() || !user) return;
+
+    // Optimistic update - add reply immediately
+    const optimisticReply: Reply = {
+      _id: `temp-reply-${Date.now()}`,
+      user: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profileImage: (user as any).imageUrl || user.profileImage,
+      },
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._id === postId
+          ? {
+              ...p,
+              comments: p.comments.map((c) =>
+                c._id === commentId
+                  ? { ...c, replies: [...(c.replies || []), optimisticReply] }
+                  : c
+              ),
+            }
+          : p
+      )
+    );
+
+    try {
+      const res = await axiosInstance.post(
+        `/posts/${postId}/comments/${commentId}/replies`,
+        { content }
+      );
+
+      // Replace optimistic reply with real one from server
+      const updatedPost = res.data.post;
+      const normalizedPost = {
+        ...updatedPost,
+        comments: updatedPost.comments.map((comment: Comment) => ({
+          ...comment,
+          user: {
+            ...comment.user,
+            firstName: comment.user?.firstName || "",
+            lastName: comment.user?.lastName || "",
+            email: comment.user?.email || "",
+          },
+          replies: (comment.replies || []).map((reply: Reply) => ({
+            ...reply,
+            user: {
+              ...reply.user,
+              firstName: reply.user?.firstName || "",
+              lastName: reply.user?.lastName || "",
+              email: reply.user?.email || "",
+            },
+          })),
+        })),
+      };
+
+      setPosts((prev) =>
+        prev.map((p) => (p._id === postId ? normalizedPost : p))
+      );
+
+      toast.success("Reply added!");
+    } catch {
+      // Remove optimistic reply on error
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId
+            ? {
+                ...p,
+                comments: p.comments.map((c) =>
+                  c._id === commentId
+                    ? {
+                        ...c,
+                        replies: (c.replies || []).filter(
+                          (r) => r._id !== optimisticReply._id
+                        ),
+                      }
+                    : c
+                ),
+              }
+            : p
+        )
+      );
+      toast.error("Failed to add reply.");
+    }
+  };
+
+  const observerRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!observerRef.current || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isFetchingMore) {
+          console.log("Loading more posts...", {
+            page,
+            hasMore,
+            isFetchingMore,
+          });
+          loadMorePosts();
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% visible
+    );
+
+    observer.observe(observerRef.current);
+
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, page, loading]); // Added page and loading to dependencies
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-lg text-gray-600">
+          Please log in to view the timeline.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Sidebar */}
+        <aside className="lg:col-span-3 hidden lg:block">
+          <UserProfileCard />
+        </aside>
+
+        {/* Main Content */}
+        <main className="lg:col-span-6">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+            Timeline
+          </h1>
+
+          {/* Post Composer */}
+          <PostComposer
+            user={user}
+            onSubmit={handlePost}
+            isSubmitting={submitting}
+            characterLimit={characterLimit}
+            isPremiumPlan={isPremiumPlan}
+            onUpgradeClick={handleUpgrade}
+            isUpgrading={isUpgrading}
+          />
+
+          {/* Posts List */}
+          {/* Posts List */}
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <LoadingSpinner />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-md p-6 text-center">
+              <p className="text-gray-500">
+                No posts yet. Be the first to share something!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <TimelinePost
+                  key={post._id}
+                  id={post._id}
+                  user={post.user}
+                  type={post.type}
+                  content={post.content}
+                  imageUrl={post.imageUrl}
+                  likes={post.likes}
+                  comments={post.comments}
+                  createdAt={post.createdAt}
+                  isLiked={!!likedPosts[post._id]}
+                  currentUser={user as any}
+                  jobMeta={post.jobMeta as any}
+                  jobPostId={post.jobPostId}
+                  onLike={toggleLike}
+                  onComment={handleCommentSubmit}
+                  onReply={handleReplySubmit}
+                  onDelete={handleDelete}
+                />
+              ))}
+
+              {/* Loader for infinite scroll */}
+              {isFetchingMore && (
+                <div className="flex justify-center py-4">
+                  <LoadingSpinner />
+                </div>
+              )}
+
+              {/* Intersection Observer target */}
+              <div ref={observerRef} className="h-10"></div>
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar */}
+        <aside className="lg:col-span-3 hidden lg:block">
+          <RightSidebar />
+        </aside>
+      </div>
+
+      {/* Notification Center - Bottom Left (Premium Only) */}
+      <NotificationCenter isPremium={isPremiumPlan} />
+    </div>
+  );
+};
+
+export default Timeline;

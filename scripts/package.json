@@ -1,0 +1,9 @@
+{
+    "name": "doc-generator",
+    "version": "1.0.0",
+    "type": "module",
+    "dependencies": {
+        "marked": "^11.0.0",
+        "puppeteer": "^21.0.0"
+    }
+}
