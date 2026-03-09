@@ -1,0 +1,51 @@
+export const followsData = [
+  // Candidates following recruiters
+  { followerEmail: "candidate@example.com", followingEmail: "recruiter@example.com" },
+  { followerEmail: "candidate@example.com", followingEmail: "robert.thompson@example.com" },
+  { followerEmail: "dev@example.com", followingEmail: "recruiter@example.com" },
+  { followerEmail: "dev@example.com", followingEmail: "amanda.davis@example.com" },
+  { followerEmail: "emily.rodriguez@example.com", followingEmail: "recruiter@example.com" },
+  { followerEmail: "emily.rodriguez@example.com", followingEmail: "lisa.anderson@example.com" },
+  { followerEmail: "david.kim@example.com", followingEmail: "christopher.miller@example.com" },
+  { followerEmail: "jessica.taylor@example.com", followingEmail: "amanda.davis@example.com" },
+  { followerEmail: "james.anderson@example.com", followingEmail: "mark.johnson@example.com" },
+  { followerEmail: "priya.sharma@example.com", followingEmail: "robert.thompson@example.com" },
+  { followerEmail: "alex.martinez@example.com", followingEmail: "recruiter@example.com" },
+  { followerEmail: "alex.martinez@example.com", followingEmail: "lisa.anderson@example.com" },
+  { followerEmail: "olivia.brown@example.com", followingEmail: "amanda.davis@example.com" },
+  { followerEmail: "ryan.wilson@example.com", followingEmail: "christopher.miller@example.com" },
+  { followerEmail: "sophia.lee@example.com", followingEmail: "recruiter@example.com" },
+  { followerEmail: "daniel.garcia@example.com", followingEmail: "mark.johnson@example.com" },
+
+  // Recruiters following candidates
+  { followerEmail: "recruiter@example.com", followingEmail: "candidate@example.com" },
+  { followerEmail: "recruiter@example.com", followingEmail: "dev@example.com" },
+  { followerEmail: "recruiter@example.com", followingEmail: "david.kim@example.com" },
+  { followerEmail: "robert.thompson@example.com", followingEmail: "candidate@example.com" },
+  { followerEmail: "robert.thompson@example.com", followingEmail: "emily.rodriguez@example.com" },
+  { followerEmail: "amanda.davis@example.com", followingEmail: "jessica.taylor@example.com" },
+  { followerEmail: "amanda.davis@example.com", followingEmail: "olivia.brown@example.com" },
+  { followerEmail: "christopher.miller@example.com", followingEmail: "ryan.wilson@example.com" },
+  { followerEmail: "lisa.anderson@example.com", followingEmail: "dev@example.com" },
+  { followerEmail: "mark.johnson@example.com", followingEmail: "james.anderson@example.com" },
+
+  // Candidates following candidates
+  { followerEmail: "candidate@example.com", followingEmail: "dev@example.com" },
+  { followerEmail: "dev@example.com", followingEmail: "candidate@example.com" },
+  { followerEmail: "dev@example.com", followingEmail: "emily.rodriguez@example.com" },
+  { followerEmail: "emily.rodriguez@example.com", followingEmail: "ryan.wilson@example.com" },
+  { followerEmail: "david.kim@example.com", followingEmail: "daniel.garcia@example.com" },
+  { followerEmail: "jessica.taylor@example.com", followingEmail: "olivia.brown@example.com" },
+  { followerEmail: "olivia.brown@example.com", followingEmail: "jessica.taylor@example.com" },
+  { followerEmail: "james.anderson@example.com", followingEmail: "dev@example.com" },
+  { followerEmail: "priya.sharma@example.com", followingEmail: "ryan.wilson@example.com" },
+  { followerEmail: "alex.martinez@example.com", followingEmail: "candidate@example.com" },
+  { followerEmail: "alex.martinez@example.com", followingEmail: "dev@example.com" },
+  { followerEmail: "ryan.wilson@example.com", followingEmail: "emily.rodriguez@example.com" },
+  { followerEmail: "sophia.lee@example.com", followingEmail: "ryan.wilson@example.com" },
+  { followerEmail: "daniel.garcia@example.com", followingEmail: "david.kim@example.com" },
+
+  // Admin following some users
+  { followerEmail: "admin@example.com", followingEmail: "candidate@example.com" },
+  { followerEmail: "admin@example.com", followingEmail: "dev@example.com" },
+];

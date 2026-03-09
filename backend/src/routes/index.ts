@@ -1,0 +1,70 @@
+import { Router } from "express";
+
+import authRoutes from "./authRoutes";
+import adminRoutes from "./adminRoutes";
+import chatRoutes from "./chatRoutes";
+import experienceLevelRoutes from "./experienceLevelRoutes";
+import jobApplicationRoutes from "./jobApplicationRoutes";
+import jobApplicationStatusRoutes from "./jobApplicationStatusRoutes";
+import jobPostRoutes from "./jobPostRoutes";
+import jobTypeRoutes from "./jobTypeRoutes";
+import postRoutes from "./postRoutes";
+import proficiencyLevelRoutes from "./proficiencyLevelRoutes";
+import roleRoutes from "./roleRoutes";
+import savedJobRoutes from "./savedJobRoutes";
+import shortlistRoutes from "./shortlistRoutes";
+import shortlistStatusRoutes from "./shortlistStatusRoutes";
+import skillCategoryRoutes from "./skillCategoryRoutes";
+import skillRoutes from "./skillRoutes";
+import userCertificationRoutes from "./userCertificationRoutes";
+import userEducationRoutes from "./userEducationRoutes";
+import userExperienceRoutes from "./userExperienceRoutes";
+import userRoutes from "./userRoutes";
+import userSkillRoutes from "./userSkillRoutes";
+import workModeRoutes from "./workModeRoutes";
+import interviewQuestionRoutes from "./interviewQuestionsRoutes";
+import interviewVideoRoutes from "./interviewVideoRoutes";
+import blogRoutes from "./blogRoutes";
+import analyticsRoutes from "./analyticsRoutes";
+import paymentRoutes from "./paymentRoutes";
+import notificationRoutes from "./notificationRoutes";
+import followRoutes from "./followRoutes";
+
+import atsRoutes from "./atsRoutes";
+import agentRoutes from "./agentRoutes";
+
+const router = Router();
+
+router.use("/admin", adminRoutes);
+router.use("/auth", authRoutes);
+router.use("/ats", atsRoutes); // Register ATS routes
+router.use("/chats", chatRoutes);
+router.use("/experience-levels", experienceLevelRoutes);
+router.use("/job-applications", jobApplicationRoutes);
+router.use("/job-application-statuses", jobApplicationStatusRoutes);
+router.use("/job-posts", jobPostRoutes);
+router.use("/job-types", jobTypeRoutes);
+router.use("/posts", postRoutes);
+router.use("/proficiency-levels", proficiencyLevelRoutes);
+router.use("/roles", roleRoutes);
+router.use("/saved-jobs", savedJobRoutes);
+router.use("/shortlists", shortlistRoutes);
+router.use("/shortlist-statuses", shortlistStatusRoutes);
+router.use("/skill-categories", skillCategoryRoutes);
+router.use("/skills", skillRoutes);
+router.use("/user-certifications", userCertificationRoutes);
+router.use("/user-educations", userEducationRoutes);
+router.use("/user-experiences", userExperienceRoutes);
+router.use("/users", userRoutes);
+router.use("/user-skills", userSkillRoutes);
+router.use("/work-modes", workModeRoutes);
+router.use("/interview-questions", interviewQuestionRoutes);
+router.use("/interview-videos", interviewVideoRoutes);
+router.use("/blogs", blogRoutes);
+router.use("/analytics", analyticsRoutes);
+router.use("/payments", paymentRoutes);
+router.use("/notifications", notificationRoutes);
+router.use("/follows", followRoutes);
+router.use("/agent", agentRoutes);
+
+export default router;
