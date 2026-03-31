@@ -3,11 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   typescript: {
-    // Allow production builds to complete even with type errors
     ignoreBuildErrors: true,
   },
   eslint: {
-    // Allow production builds to complete even with ESLint errors
     ignoreDuringBuilds: true,
   },
   images: {
@@ -17,6 +15,10 @@ const nextConfig: NextConfig = {
         hostname: "localhost",
         port: "3001",
         pathname: "/uploads/**",
+      },
+      {
+        protocol: "https",
+        hostname: "i.pravatar.cc",
       },
     ],
   },

@@ -7,7 +7,7 @@ from bson import ObjectId
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
-DB_NAME = os.getenv("DB_NAME", "test")
+DB_NAME = os.getenv("DB_NAME", "careercompass")
 
 client = None
 db = None
@@ -21,7 +21,7 @@ def get_db():
         try:
             db = client[DB_NAME]
         except Exception:
-             pass
+            pass
     return db
 
 def get_job_posts() -> List[Dict[str, Any]]:
@@ -33,7 +33,7 @@ def get_job_posts() -> List[Dict[str, Any]]:
         return []
 
     collection = database["jobposts"]
-
+    
     jobs = []
     # Fetch all jobs.
     cursor = collection.find({"isActive": True}) 
@@ -47,15 +47,15 @@ def get_job_posts() -> List[Dict[str, Any]]:
         # Convert ObjectId to string for JSON serialization
         if "_id" in document:
             document["_id"] = str(document["_id"])
-        
+                
         # Collect IDs for bulk fetching
         if "requiredSkills" in document and isinstance(document["requiredSkills"], list):
             for skill_id in document["requiredSkills"]:
                 if isinstance(skill_id, (str, ObjectId)):
-                     all_skill_ids.add(ObjectId(skill_id))
+                    all_skill_ids.add(ObjectId(skill_id))
         
         if "workMode" in document and document["workMode"]:
-             if isinstance(document["workMode"], (str, ObjectId)):
+            if isinstance(document["workMode"], (str, ObjectId)):
                 all_workmode_ids.add(ObjectId(document["workMode"]))
 
         for key, value in document.items():
@@ -141,6 +141,7 @@ def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
                 except:
                     pass  # Invalid ObjectId string, skip
 
+
     # Bulk fetch user information
     user_map = {}
     if user_ids_to_fetch:
@@ -155,10 +156,8 @@ def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
                 "imageUrl": user.get("imageUrl")
             }
 
-    # Process documents: populate users and convert ObjectIds
     jobs = []
     for document in raw_jobs:
-        # Populate user field if it's an ObjectId or string ID
         if "user" in document:
             user_value = document["user"]
             if isinstance(user_value, (ObjectId, str)):
@@ -176,7 +175,6 @@ def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
             elif isinstance(value, list):
                 document[key] = [str(v) if isinstance(v, ObjectId) else v for v in value]
             elif isinstance(value, dict) and key != "user":
-                # Handle nested dictionaries (but skip user since we already processed it)
                 for nested_key, nested_value in value.items():
                     if isinstance(nested_value, ObjectId):
                         value[nested_key] = str(nested_value)
@@ -191,4 +189,3 @@ def get_normal_job_posts(recommended_jobs: List[Dict[str, Any]]):
 
 if __name__ == "__main__":
     job_posts = get_job_posts()
-    print(f"Fetched {len(job_posts)} job posts from the database.")

@@ -84,8 +84,6 @@ export const getAllPosts = async (req: Request, res: Response) => {
     if (cached) {
       return res.status(200).json(cached);
     }
-
-    // 0. Get Recommended Posts (Random)
     
     // 1. Get list of people the current user follows
     const follows = await Follow.find({ follower: userId }).select("following");
@@ -113,6 +111,7 @@ export const getAllPosts = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .lean();
 
+      // 4. Fetch recommended job posts from FastAPI
     const fastapiBase = process.env.FASTAPI_BASE_URL || "http://127.0.0.1:8000";
     let recommendedJobs: any = null;
     try {
@@ -131,22 +130,28 @@ export const getAllPosts = async (req: Request, res: Response) => {
     let posts: any[] = [...normal_posts];
 
     if (recommendedJobs && Array.isArray(recommendedJobs) && recommendedJobs.length > 0) {
-      let insertIndex = Math.floor(Math.random() * parseInt(process.env.REACT_APP_POSTS_INTERVAL as any)) + 1; // Random index between 1 and n
+      const intervalStr = process.env.REACT_APP_POSTS_INTERVAL || "4";
+      const interval = parseInt(intervalStr, 10) || 4;
+      
+      // Start inserting between 1 and `interval` index
+      let insertIndex = Math.floor(Math.random() * interval) + 1;
 
       for (const job of recommendedJobs) {
         const jobPost = {
           ...job,
-          // isRecommendedJob: true, 
         };
         
-        // insert job at this position
-        posts.splice(insertIndex, 0, jobPost);
-
-        insertIndex += Math.floor(Math.random() * parseInt(process.env.REACT_APP_POSTS_INTERVAL as any)) + 1;
-
+        // Ensure we don't splice out of bounds, which clusters them at the end
         if (insertIndex > posts.length) {
           insertIndex = posts.length;
         }
+
+        // insert job at this position
+        posts.splice(insertIndex, 0, jobPost);
+
+        // Advance by 1 (the job just inserted) + interval (amount of normal posts to skip)
+        // This ensures they are properly spaced chronologically.
+        insertIndex += 1 + interval;
       }
     }
     

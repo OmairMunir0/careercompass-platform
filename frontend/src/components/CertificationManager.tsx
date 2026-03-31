@@ -82,7 +82,6 @@ export default function CertificationManager() {
         <ul className="space-y-3">
           {certifications.map((cert) => (
             <li
-              key={cert.id}
               className="border border-gray-300 rounded-md p-4 flex justify-between items-center hover:bg-gray-50"
             >
               <div className="cursor-pointer" onClick={() => handleEdit(cert)}>
