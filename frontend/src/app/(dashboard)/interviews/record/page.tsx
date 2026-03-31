@@ -71,6 +71,8 @@ const CategoryInterviewsPage: React.FC = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
+    const recordingStartTimeRef = useRef<number>(0);
+    const timestampsRef = useRef<any[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
@@ -195,6 +197,7 @@ const CategoryInterviewsPage: React.FC = () => {
         };
 
         mediaRecorder.start();
+        recordingStartTimeRef.current = Date.now();
         setIsRecording(true);
         setRecordingTime(0);
         setRecordingStarted(true);
@@ -230,8 +233,8 @@ const CategoryInterviewsPage: React.FC = () => {
             const formData = new FormData();
             formData.append("file", videoBlob, `interview-${Date.now()}.${fileExtension}`);
 
-            console.log("Sending questions to backend:", InterviewQuestionFromChild);
-            const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}`, formData, {
+            console.log("Sending questions & timestamps to backend:", InterviewQuestionFromChild, timestampsRef.current);
+            const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}&timestamps=${encodeURIComponent(JSON.stringify(timestampsRef.current))}`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
@@ -537,6 +540,8 @@ const CategoryInterviewsPage: React.FC = () => {
                                 interviewStarted={recordingStarted}
                                 recordingStopped={recordingStopped}
                                 reset={resetQuestions}
+                                recordingStartTime={recordingStartTimeRef.current}
+                                onTimestampsUpdate={(logs) => { timestampsRef.current = logs; }}
                             />
                         </>
                     )}

@@ -66,8 +66,8 @@ def extract_audio_to_wav(video_path: str) -> str:
     return tmp_mp3_path
 
 
-# === 3. Transcribe + Split into 40-second chunks ===
-def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -> Tuple[str, List[str]]:
+# === 3. Transcribe + Split into chunks ===
+def transcribe_and_split(audio_path: str, timestamps_list: list = None, segment_duration: int = ANSWER_TIME) -> Tuple[str, List[str]]:
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
     
@@ -80,14 +80,40 @@ def transcribe_and_split(audio_path: str, segment_duration: int = ANSWER_TIME) -
     full_transcript = result["text"].strip()
 
     segments = result["segments"]
-    num_chunks = 10
-    chunks = [""] * num_chunks
-
-    for seg in segments:
-        start = float(seg["start"])
-        text = seg["text"].strip()
-        bucket_idx = min(int(start // segment_duration), num_chunks - 1)
-        chunks[bucket_idx] += " " + text
+    
+    # If timestamps are explicitly provided by the frontend UI:
+    if timestamps_list and len(timestamps_list) > 0:
+        # Determine maximum question index to size the array
+        num_chunks = max([t.get("q_idx", t.get("q_index", 0)) for t in timestamps_list]) + 1
+        chunks = [""] * num_chunks
+        
+        for seg in segments:
+            start = float(seg["start"])
+            text = seg["text"].strip()
+            
+            # Find which question window this segment falls into
+            mapped_idx = -1
+            for t in timestamps_list:
+                q_start = t.get("start", 0)
+                q_end = t.get("end", 9999)
+                # If segment started strictly inside the answer window, or overlapped mostly:
+                if start >= q_start and start <= (q_end + 2.0): # 2 second buffer
+                    mapped_idx = t.get("q_idx", t.get("q_index", 0))
+                    break
+            
+            # If no bucket found, the AI was probably talking, so we simply ignore it!
+            if mapped_idx != -1 and mapped_idx < num_chunks:
+                chunks[mapped_idx] += " " + text
+                
+    else:
+        # Fallback to the classic mathematical chopping 
+        num_chunks = 10
+        chunks = [""] * num_chunks
+        for seg in segments:
+            start = float(seg["start"])
+            text = seg["text"].strip()
+            bucket_idx = min(int(start // segment_duration), num_chunks - 1)
+            chunks[bucket_idx] += " " + text
 
     chunks = [c.strip() or "[silent]" for c in chunks]
     print(f"[Whisper] Transcription complete → {len(chunks)} chunks")

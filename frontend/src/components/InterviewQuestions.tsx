@@ -14,12 +14,20 @@ interface InterviewQuestion {
   categoryId: string;
 }
 
+export interface TimestampLog {
+  q_idx: number;
+  start: number;
+  end: number;
+}
+
 interface InterviewQuestionsProps {
   questions: InterviewQuestion[];
   speakQuestion?: (text: string) => void;
   interviewStarted?: boolean;
   recordingStopped?: boolean;
   reset?: boolean;
+  recordingStartTime?: number;
+  onTimestampsUpdate?: (timestamps: TimestampLog[]) => void;
 }
 
 // --- Constants ---
@@ -32,6 +40,8 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
   interviewStarted,
   recordingStopped,
   reset,
+  recordingStartTime,
+  onTimestampsUpdate,
 }) => {
   const searchParams = useSearchParams();
   const token = useAuthStore.getState().token;
@@ -43,9 +53,12 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timer, setTimer] = useState(0);
   const [showQuestion, setShowQuestion] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [timestamps, setTimestamps] = useState<TimestampLog[]>([]);
 
   const answerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const nextQuestionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentQStartRef = useRef<number>(0);
 
   // Update questions when props change
   useEffect(() => {
@@ -54,12 +67,26 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
     }
   }, [propQuestions]);
 
-  // Reset logic
+  // Reset logic & capture early stops
   useEffect(() => {
     if (reset || recordingStopped) {
+      if (recordingStopped && answerTimerRef.current && currentQStartRef.current > 0) {
+        // Record partial completion if stopped directly mid-answer
+        const qEnd = (Date.now() - (recordingStartTime || Date.now())) / 1000;
+        setTimestamps(prev => {
+          if (prev.find(t => t.q_idx === currentIndex)) return prev;
+          const newLogs = [...prev, { q_idx: currentIndex, start: currentQStartRef.current, end: qEnd }];
+          if (onTimestampsUpdate) onTimestampsUpdate([...newLogs]);
+          return newLogs;
+        });
+      }
+
       setCurrentIndex(0);
       setTimer(0);
       setShowQuestion(false);
+      setIsSpeaking(false);
+      setTimestamps([]);
+      currentQStartRef.current = 0;
       if (answerTimerRef.current) clearInterval(answerTimerRef.current);
       if (nextQuestionTimerRef.current) clearTimeout(nextQuestionTimerRef.current);
       window.speechSynthesis.cancel();
@@ -77,6 +104,7 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
 
       setCurrentIndex(index);
       setShowQuestion(false);
+      setIsSpeaking(true);
 
       // 🔒 Prevent re-speaking same question
       if (spokenRef.has(index)) return;
@@ -93,16 +121,27 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
 
       utterance.onstart = () => {
         setShowQuestion(true); // show current question when AI starts talking
+        setTimer(DEFAULT_ANSWER_TIME); // Reset timer display visually
       };
 
       utterance.onend = () => {
+        setIsSpeaking(false);
         if (recordingStopped) return;
 
-        setTimer(DEFAULT_ANSWER_TIME);
+        currentQStartRef.current = (Date.now() - (recordingStartTime || Date.now())) / 1000;
+
         answerTimerRef.current = setInterval(() => {
           setTimer((prev) => {
             if (prev <= 1) {
               clearInterval(answerTimerRef.current!);
+              
+              const qEnd = (Date.now() - (recordingStartTime || Date.now())) / 1000;
+              setTimestamps(prevLogs => {
+                const newLogs = [...prevLogs, { q_idx: index, start: currentQStartRef.current, end: qEnd }];
+                if (onTimestampsUpdate) onTimestampsUpdate([...newLogs]);
+                return newLogs;
+              });
+
               if (!recordingStopped) {
                 nextQuestionTimerRef.current = setTimeout(
                   () => askQuestion(index + 1),
@@ -154,7 +193,14 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
 
           {!recordingStopped && (
             <p className="text-red-500 font-semibold mt-4">
-              Time Remaining: {timer}s
+              {isSpeaking ? (
+                <span className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  <span>AI Speaking...</span>
+                </span>
+              ) : (
+                `Time Remaining: ${timer}s`
+              )}
             </p>
           )}
         </div>

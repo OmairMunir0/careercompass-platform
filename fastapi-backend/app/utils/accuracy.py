@@ -10,7 +10,7 @@ import re
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model_gemini = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+model_gemini = genai.GenerativeModel('gemini-3-flash-preview', generation_config={"response_mime_type": "application/json"})
 
 def get_llm_rubric_score(question: str, transcript: str) -> dict:
     if not transcript or len(transcript.strip()) < 5:

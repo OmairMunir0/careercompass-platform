@@ -26,7 +26,7 @@ router = APIRouter()
 # In-memory job tracker for async background operations
 job_results: Dict[str, dict] = {}
 
-def process_video_background(job_id: str, video_path: str, questions_list: list):
+def process_video_background(job_id: str, video_path: str, questions_list: list, timestamps_list: list):
     audio_path = None
     try:
         # 1. Update status
@@ -36,7 +36,7 @@ def process_video_background(job_id: str, video_path: str, questions_list: list)
         audio_path = extract_audio_to_wav(video_path)
 
         # 3. Transcribe
-        full_transcript, segmented_chuks = transcribe_and_split(audio_path, segment_duration=ANSWER_TIME)
+        full_transcript, segmented_chuks = transcribe_and_split(audio_path, timestamps_list=timestamps_list, segment_duration=ANSWER_TIME)
         
         # 4. Fetch Accuracy
         analysis = get_accuracy(segmented_chuks, questions_list)
@@ -93,19 +93,24 @@ def process_video_background(job_id: str, video_path: str, questions_list: list)
 async def upload_video(background_tasks: BackgroundTasks,
                        file: UploadFile = File(...), 
                        categoryId: str = Query(..., description="MongoDB category ID for the skill"),
-                       questions: str = Query(...)  ) -> Dict:
+                       questions: str = Query(...),
+                       timestamps: str = Query(None)  ) -> Dict:
     
     try:
         # 1. Save video immediately
         video_path = save_uploaded_video(file)
         questions_list = json.loads(urllib.parse.unquote(questions))
+        
+        timestamps_list = []
+        if timestamps:
+            timestamps_list = json.loads(urllib.parse.unquote(timestamps))
 
         # 2. Create job
         job_id = str(uuid.uuid4())
         job_results[job_id] = {"status": "pending"}
 
         # 3. Queue task
-        background_tasks.add_task(process_video_background, job_id, video_path, questions_list)
+        background_tasks.add_task(process_video_background, job_id, video_path, questions_list, timestamps_list)
         
         return {
             "message": "Video accepted for processing",
