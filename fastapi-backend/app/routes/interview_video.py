@@ -1,6 +1,6 @@
-from __future__ import annotations
-from fastapi import APIRouter, UploadFile, File, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Query, HTTPException, BackgroundTasks
 import os
+import uuid
 from typing import Dict, List
 from sentence_transformers import SentenceTransformer
 import openai
@@ -22,22 +22,16 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter()
-# model = SentenceTransformer(MODEL)
 
+# In-memory job tracker for async background operations
+job_results: Dict[str, dict] = {}
 
-@router.post("/upload")
-async def upload_video(file: UploadFile = File(...), 
-                       categoryId: str = Query(..., description="MongoDB category ID for the skill"),
-                       questions: str = Query(...)  ) -> Dict:
-    video_path = None
+def process_video_background(job_id: str, video_path: str, questions_list: list):
     audio_path = None
-    
     try:
-        # 1. Save video
-        video_path = save_uploaded_video(file)
-        public_url = f"{BASE_URL}/videos/{file.filename}"
-        questions_list = json.loads(urllib.parse.unquote(questions))
-
+        # 1. Update status
+        job_results[job_id]["status"] = "processing"
+        
         # 2. Extract audio
         audio_path = extract_audio_to_wav(video_path)
 
@@ -49,28 +43,36 @@ async def upload_video(file: UploadFile = File(...),
         
         # 5. Emotion Analysis
         emotions = analyze_interview_video(video_path, frame_interval_seconds=1, display_timeline=False)
+        
+        # Add public URL
+        public_url = f"{BASE_URL}/videos/{os.path.basename(video_path)}"
 
-        dummy = {
-            "accuracy": {
-                            "video_path": public_url,
-                            "transcript": full_transcript,
-                            "result": analysis["result"],         
-                            "overall_score": analysis["overall_score"],     
-                        },
-            "emotions": emotions,
+        job_results[job_id] = {
+            "status": "completed",
+            "result": {
+                "accuracy": {
+                                "video_path": public_url,
+                                "transcript": full_transcript,
+                                "result": analysis["result"],         
+                                "overall_score": analysis["overall_score"],     
+                            },
+                "emotions": emotions,
+            }
         }
-
-        print("Final Response:", dummy)
-        return dummy
+        print(f"[Job {job_id}] Processing completed successfully.")
 
     except Exception as e:
-        print(f"Error processing video: {e}")
-        raise RuntimeError(f"Processing failed: {e}")
+        print(f"[Job {job_id}] Processing failed: {e}")
+        job_results[job_id] = {
+            "status": "failed",
+            "error": str(e)
+        }
     finally:
-        # Always clean up temporary files
+        # Always clean up temporary audio file
         cleanup_temp_file(audio_path)
         
-        # Delete the uploaded video file after processing
+        # If we return a public_url to the video, deleting it removes access from the frontend!
+        # Assuming the original code's deletion was intentional to prevent unbounded storage:
         if video_path and os.path.exists(video_path):
             try:
                 os.unlink(video_path)
@@ -78,13 +80,46 @@ async def upload_video(file: UploadFile = File(...),
             except Exception as e:
                 print(f"[Cleanup] Warning: Failed to delete video file {video_path}: {e}")
         
-        # Clean up the converted MP4 if different from original
-        if video_path:
-             # This simple logic assumes the converter replaces extension with .mp4
-             mp4_path = os.path.splitext(video_path)[0] + ".mp4"
-             if mp4_path != video_path and os.path.exists(mp4_path):
-                 try:
-                    os.unlink(mp4_path)
-                    print(f"[Cleanup] Deleted converted mp4 file: {mp4_path}")
-                 except Exception as e:
-                    print(f"[Cleanup] Warning: Failed to delete mp4 file {mp4_path}: {e}")
+        mp4_path = os.path.splitext(video_path)[0] + ".mp4"
+        if mp4_path != video_path and os.path.exists(mp4_path):
+            try:
+                os.unlink(mp4_path)
+                print(f"[Cleanup] Deleted converted mp4 file: {mp4_path}")
+            except Exception as e:
+                print(f"[Cleanup] Warning: Failed to delete mp4 file {mp4_path}: {e}")
+
+
+@router.post("/upload")
+async def upload_video(background_tasks: BackgroundTasks,
+                       file: UploadFile = File(...), 
+                       categoryId: str = Query(..., description="MongoDB category ID for the skill"),
+                       questions: str = Query(...)  ) -> Dict:
+    
+    try:
+        # 1. Save video immediately
+        video_path = save_uploaded_video(file)
+        questions_list = json.loads(urllib.parse.unquote(questions))
+
+        # 2. Create job
+        job_id = str(uuid.uuid4())
+        job_results[job_id] = {"status": "pending"}
+
+        # 3. Queue task
+        background_tasks.add_task(process_video_background, job_id, video_path, questions_list)
+        
+        return {
+            "message": "Video accepted for processing",
+            "job_id": job_id,
+            "status": "pending"
+        }
+
+    except Exception as e:
+        print(f"Error handling video upload: {e}")
+        raise HTTPException(status_code=500, detail=f"Initialization failed: {e}")
+
+@router.get("/status/{job_id}")
+async def get_job_status(job_id: str) -> Dict:
+    if job_id not in job_results:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    return job_results[job_id]

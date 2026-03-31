@@ -235,16 +235,30 @@ const CategoryInterviewsPage: React.FC = () => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
-            const fastapi_response = response.data.fastapi_response;
+            const jobId = response.data.job_id;
+            
+            // Poll for status
+            let isComplete = false;
+            let finalResult = null;
+            
+            while (!isComplete) {
+                await new Promise(resolve => setTimeout(resolve, 3000)); // wait 3 seconds
+                const statusRes = await axiosInstance.get(`/interview-videos/status/${jobId}`);
+                
+                if (statusRes.data.status === 'completed') {
+                    isComplete = true;
+                    finalResult = statusRes.data.result;
+                } else if (statusRes.data.status === 'failed') {
+                    throw new Error(statusRes.data.error || "Processing failed");
+                }
+            }
 
-            const video_path = fastapi_response.video_path;
-            addAnalysis(fastapi_response);
+            const video_path = finalResult.accuracy.video_path;
+            // The format from FastAPI is now directly the result object
+            addAnalysis(finalResult);
 
             // Redirect to analysis page
             router.push(`/interviews/analysis?categoryId=${categoryId}&video=${encodeURIComponent(video_path)}`);
-            setTimeout(() => {
-                // window.location.reload();
-            }, 1000);
         } catch (error) {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
@@ -357,9 +371,26 @@ const CategoryInterviewsPage: React.FC = () => {
             const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            const fastapi_response = response.data.fastapi_response;
-            const video_path = fastapi_response.video_path;
-            addAnalysis(fastapi_response);
+            const jobId = response.data.job_id;
+            
+            // Poll for status
+            let isComplete = false;
+            let finalResult = null;
+            
+            while (!isComplete) {
+                await new Promise(resolve => setTimeout(resolve, 3000)); // wait 3 seconds
+                const statusRes = await axiosInstance.get(`/interview-videos/status/${jobId}`);
+                
+                if (statusRes.data.status === 'completed') {
+                    isComplete = true;
+                    finalResult = statusRes.data.result;
+                } else if (statusRes.data.status === 'failed') {
+                    throw new Error(statusRes.data.error || "Processing failed");
+                }
+            }
+
+            const video_path = finalResult.accuracy.video_path;
+            addAnalysis(finalResult);
             router.push(`/interviews/analysis?categoryId=${categoryId}&video=${encodeURIComponent(video_path)}`);
         } catch (error) {
             console.error("Error uploading video:", error);

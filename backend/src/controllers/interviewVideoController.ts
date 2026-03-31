@@ -40,17 +40,26 @@ export const uploadInterviewVideo = async (req: any, res: Response) => {
     });
 
     return res.json({
-      message: "Video successfully sent to FastAPI",
-      fastapi_response: {
-        accuracy: response.data.accuracy || {},
-        emotions: response.data.emotions || {},
-      }
+      message: "Video successfully sent to FastAPI for background processing",
+      job_id: response.data.job_id
     });
   } catch (err: any) {
     console.error("Upload error:", err.response?.data || err.message);
     return res.status(500).json({
       message: "Error sending video to FastAPI",
       error: err.response?.data || err.message,
+    });
+  }
+};
+
+export const getInterviewVideoStatus = async (req: any, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const response = await axios.get(`${process.env.FASTAPI_BASE_URL || 'http://127.0.0.1:8000'}/api/interview_video/status/${jobId}`);
+    return res.json(response.data);
+  } catch (err: any) {
+    return res.status(err.response?.status || 500).json({ 
+      error: err.response?.data || err.message 
     });
   }
 };

@@ -4,6 +4,67 @@ from datetime import datetime
 from typing import List, Tuple, Dict
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
+import json
+import re
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+model_gemini = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+
+def get_llm_rubric_score(question: str, transcript: str) -> dict:
+    if not transcript or len(transcript.strip()) < 5:
+        return {"technical_accuracy": 0, "depth": 0, "clarity": 0}
+        
+    prompt = f"""
+    You are a senior technical interviewer.
+    Question: {question}
+    Candidate Answer: {transcript}
+
+    Score from 0 to 10 on the following metrics based on the answer provided.
+    Be Lineant.
+    Ensure output is exactly this JSON structure:
+    {{
+        "technical_accuracy": 0,
+        "depth": 0,
+        "clarity": 0
+    }}
+    """
+    try:
+        response = model_gemini.generate_content(prompt)
+        result = json.loads(response.text)
+        print(result)
+        return {
+            "technical_accuracy": float(result.get("technical_accuracy", 0)),
+            "depth": float(result.get("depth", 0)),
+            "clarity": float(result.get("clarity", 0))
+        }
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        return {"technical_accuracy": 0, "depth": 0, "clarity": 0}
+
+def get_filler_words_count(transcript: str) -> int:
+    fillers = [r'\bum\b', r'\buh\b', r'\blike\b', r'\byou know\b', r'\bah\b']
+    count = 0
+    text_lower = transcript.lower()
+    for f in fillers:
+        count += len(re.findall(f, text_lower))
+    return count
+
+def get_concept_coverage(transcript: str, concepts: List[str]) -> dict:
+    if not concepts:
+        return {"hit": [], "missed": []}
+    
+    text_lower = transcript.lower()
+    hit = []
+    missed = []
+    for c in concepts:
+        if c.lower() in text_lower:
+            hit.append(c)
+        else:
+            missed.append(c)
+    return {"hit": hit, "missed": missed}
+
 
 # ----------------------------------------------------------------------
 # 1. GLOBAL MODEL (singleton) – THIS IS THE KEY
@@ -79,17 +140,36 @@ def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> Dic
             if raw.lower() != "[silent]":
                 user_ans = raw
 
-        ref_ans = q["answer"]
+        ref_ans = q.get("answer", "")
+        concepts = q.get("concepts", [])
+        
+        concept_cov = get_concept_coverage(user_ans, concepts)
+        filler_count = get_filler_words_count(user_ans)
 
         if not user_ans:
             similarity = 0.0
+            llm_scores = {"technical_accuracy": 0, "depth": 0, "clarity": 0}
         else:
             similarity = batch_similarity([(user_ans, ref_ans)])[0]
             if similarity < 0.40:
                 similarity = 0.0
+                
+            llm_scores = get_llm_rubric_score(q["question"], user_ans)
 
-        similarity = round(similarity, 4)
-        percentage = round(similarity * 100, 2)
+        # Combine semantic cosine similarity and Gemini rubric
+        llm_avg = (llm_scores["technical_accuracy"] + llm_scores["depth"] + llm_scores["clarity"]) / 3.0
+        
+        if user_ans:
+            combined_score = (similarity * 0.4) + ((llm_avg / 10.0) * 0.6)
+            # Apply tiny bonus for concepts, tiny penalty for excessive filler words
+            bonus = min(len(concept_cov["hit"]) * 0.05, 0.15)
+            penalty = min(filler_count * 0.01, 0.10)
+            combined_score = max(0.0, min(1.0, combined_score + bonus - penalty))
+        else:
+            combined_score = 0.0
+            
+        similarity = round(combined_score, 4)
+        percentage = round(combined_score * 100, 2)
 
         if user_ans:
             valid_scores.append(similarity)
@@ -101,6 +181,10 @@ def get_accuracy(segmented_chunks: List[str], questions_list: List[dict]) -> Dic
             "reference_answer": ref_ans,
             "similarity": similarity,
             "percentage": percentage,
+            "llm_scores": llm_scores,
+            "concepts_hit": concept_cov["hit"],
+            "concepts_missed": concept_cov["missed"],
+            "filler_words": filler_count
         })
 
     overall_score = round(sum(valid_scores) / len(valid_scores) * 100, 2) if valid_scores else 0.0

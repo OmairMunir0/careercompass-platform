@@ -3,6 +3,7 @@ import multer from "multer";
 import { authenticated } from "../middleware/auth";
 import {
   uploadInterviewVideo,
+  getInterviewVideoStatus,
   // getInterviewVideos,
   // getInterviewVideo,
   // deleteInterviewVideo,
@@ -16,6 +17,11 @@ const router = Router();
 // @desc    Upload an interview video to Fast API
 // @access  Private
 router.post("/upload", authenticated, upload.single("file"), uploadInterviewVideo);
+
+// @route   GET /api/interview-videos/status/:jobId
+// @desc    Get status of an async video processing job
+// @access  Private
+router.get("/status/:jobId", authenticated, getInterviewVideoStatus);
 
 // // @route   GET /api/interview-videos
 // // @desc    Get all interview videos

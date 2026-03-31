@@ -4,6 +4,7 @@ import { ISkillCategory } from "./SkillCategory";
 export interface IInterviewQuestion extends Document {
   question: string;
   answer: string; 
+  concepts?: string[];
   categoryId: mongoose.Types.ObjectId | ISkillCategory;
   difficulty?: "easy" | "medium" | "hard";
   createdAt: Date;
@@ -14,6 +15,7 @@ const InterviewQuestionSchema = new Schema<IInterviewQuestion>(
   {
     question: { type: String, required: true, trim: true },
     answer: { type: String, trim: true },
+    concepts: { type: [String], default: [] },
     categoryId: { type: Schema.Types.ObjectId, ref: "SkillCategory", required: true },
     difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium" },
   },

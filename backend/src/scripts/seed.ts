@@ -535,23 +535,16 @@ export async function seedInterviewQuestions() {
     }
 
     for (const q of questions) {
-      const exists = await InterviewQuestion.findOne({
-        question: q.question,
-        categoryId: categoryId,
-      });
+      await InterviewQuestion.findOneAndUpdate(
+        { question: q.question, categoryId: categoryId },
+        { 
+          answer: q.answer,
+          concepts: (q as any).concepts || [],
+        },
+        { upsert: true, new: true }
+      );
 
-      if (exists) {
-        console.log(`Question already exists in category '${categoryName}'. Skipping.`);
-        continue;
-      }
-
-      await InterviewQuestion.create({
-        question: q.question,
-        answer: q.answer,
-        categoryId: categoryId,
-      });
-
-      console.log(`Created question in category '${categoryName}': ${q.question}`);
+      console.log(`Upserted question in category '${categoryName}': ${q.question}`);
     }
   }
 
