@@ -55,6 +55,9 @@ const CategoryInterviewsPage: React.FC = () => {
     const categoryId = searchParams.get('categoryId');
     const categoryName = searchParams.get('categoryName');
     const decodedCategoryName = categoryName ? decodeURIComponent(categoryName) : null;
+    const isCustom = searchParams.get('custom') === 'true';
+    const numQuestions = parseInt(searchParams.get('numQuestions') || '5');
+    const userId = searchParams.get('userId');
 
     const token = useAuthStore.getState().token;
     const router = useRouter();
@@ -116,18 +119,53 @@ const CategoryInterviewsPage: React.FC = () => {
     // Fetch interview questions on mount
     useEffect(() => {
         const fetchQuestions = async () => {
-            if (!categoryId) return;
-            try {
-                const res = await axiosInstance.get("/interview-questions", {
-                    params: { categoryId },
-                });
-                setInterviewQuestionFromChild(res.data);
-            } catch (err) {
-                console.error("Failed to fetch interview questions:", err);
+            if (isCustom && userId) {
+                // Generate dynamic questions for custom interview
+                try {
+                    console.log("Generating questions for userId:", userId, "numQuestions:", numQuestions);
+                    const res = await axiosInstance.post("/interview-videos/generate-questions", null, {
+                        params: { userId, numQuestions, useAI: true }
+                    });
+                    
+                    console.log("Response from server:", res.data);
+                    
+                    // Check if response has questions
+                    if (!res.data.questions || !Array.isArray(res.data.questions)) {
+                        console.error("Invalid response structure - questions missing or not an array:", res.data);
+                        throw new Error("Invalid response from server");
+                    }
+                    
+                    // Convert to InterviewQuestion format
+                    const dynamicQuestions = res.data.questions.map((q: string, index: number) => ({
+                        _id: `custom-${index}`,
+                        question: q,
+                        answer: '',
+                        difficulty: 'Custom',
+                        categoryId: 'custom'
+                    }));
+                    
+                    console.log("Mapped questions:", dynamicQuestions);
+                    setInterviewQuestionFromChild(dynamicQuestions);
+                } catch (err: any) {
+                    console.error("Failed to generate custom questions:", err);
+                    console.error("Error response:", err.response?.data);
+                    alert('Failed to generate custom questions. Please try again.');
+                    window.history.back();
+                }
+            } else if (categoryId) {
+                // Fetch regular skill category questions
+                try {
+                    const res = await axiosInstance.get("/interview-questions", {
+                        params: { categoryId },
+                    });
+                    setInterviewQuestionFromChild(res.data);
+                } catch (err) {
+                    console.error("Failed to fetch interview questions:", err);
+                }
             }
         };
         fetchQuestions();
-    }, [categoryId]);
+    }, [categoryId, isCustom, userId, numQuestions]);
 
 
     // --- Interview handlers ---
@@ -234,7 +272,25 @@ const CategoryInterviewsPage: React.FC = () => {
             formData.append("file", videoBlob, `interview-${Date.now()}.${fileExtension}`);
 
             console.log("Sending questions & timestamps to backend:", InterviewQuestionFromChild, timestampsRef.current);
-            const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}&timestamps=${encodeURIComponent(JSON.stringify(timestampsRef.current))}`, formData, {
+            
+            let uploadUrl;
+            const queryParams = new URLSearchParams();
+            
+            if (isCustom && userId) {
+                // Custom interview upload
+                queryParams.append('userId', userId);
+                queryParams.append('useDynamicQuestions', 'true');
+                queryParams.append('numQuestions', numQuestions.toString());
+                // Use a dummy categoryId for custom interviews
+                uploadUrl = `/interview-videos/upload?categoryId=custom&${queryParams.toString()}`;
+            } else {
+                // Regular category interview upload
+                queryParams.append('questions', encodeURIComponent(JSON.stringify(InterviewQuestionFromChild)));
+                queryParams.append('timestamps', encodeURIComponent(JSON.stringify(timestampsRef.current)));
+                uploadUrl = `/interview-videos/upload?categoryId=${categoryId}&${queryParams.toString()}`;
+            }
+            
+            const response = await axiosInstance.post(uploadUrl, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
@@ -261,7 +317,16 @@ const CategoryInterviewsPage: React.FC = () => {
             addAnalysis(finalResult);
 
             // Redirect to analysis page
-            router.push(`/interviews/analysis?categoryId=${categoryId}&video=${encodeURIComponent(video_path)}`);
+            const redirectParams = new URLSearchParams();
+            if (isCustom) {
+                redirectParams.append('categoryId', 'custom');
+                redirectParams.append('custom', 'true');
+            } else {
+                redirectParams.append('categoryId', categoryId || '');
+            }
+            redirectParams.append('video', encodeURIComponent(video_path));
+            
+            router.push(`/interviews/analysis?${redirectParams.toString()}`);
         } catch (error) {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
@@ -371,7 +436,23 @@ const CategoryInterviewsPage: React.FC = () => {
             const formData = new FormData();
             formData.append("file", selectedFile);
             console.log("Uploading pre-recorded video for analysis");
-            const response = await axiosInstance.post(`/interview-videos/upload?categoryId=${categoryId}&questions=${encodeURIComponent(JSON.stringify(InterviewQuestionFromChild))}`, formData, {
+            
+            let uploadUrl;
+            const queryParams = new URLSearchParams();
+            
+            if (isCustom && userId) {
+                // Custom interview upload
+                queryParams.append('userId', userId);
+                queryParams.append('useDynamicQuestions', 'true');
+                queryParams.append('numQuestions', numQuestions.toString());
+                uploadUrl = `/interview-videos/upload?categoryId=custom&${queryParams.toString()}`;
+            } else {
+                // Regular category interview upload
+                queryParams.append('questions', encodeURIComponent(JSON.stringify(InterviewQuestionFromChild)));
+                uploadUrl = `/interview-videos/upload?categoryId=${categoryId}&${queryParams.toString()}`;
+            }
+            
+            const response = await axiosInstance.post(uploadUrl, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             const jobId = response.data.job_id;
@@ -394,7 +475,18 @@ const CategoryInterviewsPage: React.FC = () => {
 
             const video_path = finalResult.accuracy.video_path;
             addAnalysis(finalResult);
-            router.push(`/interviews/analysis?categoryId=${categoryId}&video=${encodeURIComponent(video_path)}`);
+            
+            // Redirect to analysis page
+            const redirectParams = new URLSearchParams();
+            if (isCustom) {
+                redirectParams.append('categoryId', 'custom');
+                redirectParams.append('custom', 'true');
+            } else {
+                redirectParams.append('categoryId', categoryId || '');
+            }
+            redirectParams.append('video', encodeURIComponent(video_path));
+            
+            router.push(`/interviews/analysis?${redirectParams.toString()}`);
         } catch (error) {
             console.error("Error uploading video:", error);
             alert("Video upload failed. Please try again.");
@@ -426,8 +518,15 @@ const CategoryInterviewsPage: React.FC = () => {
                     {showConfirmation && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                             <div className="bg-white rounded-lg max-w-md w-full p-6 text-center">
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Start Your Interview?</h3>
-                                <p className="text-gray-600 mb-6">Ensure your camera and microphone are ready.</p>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                    {isCustom ? 'Ready for Your Custom Interview?' : 'Ready to Start Your Interview?'}
+                                </h3>
+                                <p className="text-gray-600 mb-6">
+                                    {isCustom 
+                                        ? `We've generated ${numQuestions} personalized questions based on your profile. Ensure your camera and microphone are ready.`
+                                        : 'Ensure your camera and microphone are ready.'
+                                    }
+                                </p>
                                 <div className="flex flex-col space-y-4">
                                     <div className="flex space-x-4">
                                         <button onClick={handleCancelInterview} className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">Go Back</button>
@@ -543,6 +642,15 @@ const CategoryInterviewsPage: React.FC = () => {
                                 recordingStartTime={recordingStartTimeRef.current}
                                 onTimestampsUpdate={(logs) => { timestampsRef.current = logs; }}
                             />
+                            
+                            {/* Custom Interview Info */}
+                            {isCustom && InterviewQuestionFromChild.length > 0 && (
+                                <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                    <p className="text-sm text-purple-700">
+                                        <span className="font-semibold">Custom Interview:</span> {InterviewQuestionFromChild.length} questions generated based on your profile
+                                    </p>
+                                </div>
+                            )}
                         </>
                     )}
 

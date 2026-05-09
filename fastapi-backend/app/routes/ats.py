@@ -16,7 +16,7 @@ async def analyze_ats(request: AtsAnalysisRequest):
         if not os.path.exists(request.resume_path):
              return {"success": False, "error": f"Resume file not found at path: {request.resume_path}"}
         
-        results = analyze_resume(request.resume_path, request.job_description, request.file_type)
+        results = analyze_resume(request.resume_path, request.job_description, is_file=True, file_type=request.file_type)
         print(results)
         
         if "error" in results:

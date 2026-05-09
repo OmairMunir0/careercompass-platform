@@ -4,6 +4,7 @@ import { authenticated } from "../middleware/auth";
 import {
   uploadInterviewVideo,
   getInterviewVideoStatus,
+  generateQuestions,
   // getInterviewVideos,
   // getInterviewVideo,
   // deleteInterviewVideo,
@@ -22,6 +23,11 @@ router.post("/upload", authenticated, upload.single("file"), uploadInterviewVide
 // @desc    Get status of an async video processing job
 // @access  Private
 router.get("/status/:jobId", authenticated, getInterviewVideoStatus);
+
+// @route   POST /api/interview-videos/generate-questions
+// @desc    Generate custom interview questions based on user profile
+// @access  Private
+router.post("/generate-questions", authenticated, generateQuestions);
 
 // // @route   GET /api/interview-videos
 // // @desc    Get all interview videos

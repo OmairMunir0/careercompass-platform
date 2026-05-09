@@ -66,3 +66,68 @@ export const getInterviewVideoStatus = async (req: any, res: Response) => {
     });
   }
 };
+
+export const generateQuestions = async (req: any, res: Response) => {
+  try {
+    const { userId, numQuestions, useAI } = req.query;
+    
+    // Try FastAPI first, but have a fallback
+    try {
+      const response = await axios.post(`${process.env.FASTAPI_BASE_URL || 'http://127.0.0.1:8000'}/api/interview_video/generate-questions`, null, {
+        params: { userId, numQuestions, useAI }
+      });
+      
+      return res.json(response.data);
+    } catch (fastapiError: any) {
+      console.warn("FastAPI question generation failed, using fallback:", fastapiError.message);
+      
+      // Fallback question generation
+      const questionCount = parseInt(numQuestions as string) || 5;
+      const fallbackQuestions = generateFallbackQuestions(questionCount);
+      
+      return res.json({
+        success: true,
+        questions: fallbackQuestions,
+        question_count: fallbackQuestions.length,
+        user_profile: {
+          position: "Professional",
+          experienceLevel: "Entry-Level",
+          yearsExperience: 0,
+          skills: [],
+          location: "Anywhere"
+        },
+        fallback: true
+      });
+    }
+  } catch (err: any) {
+    console.error("Generate questions error:", err.response?.data || err.message);
+    return res.status(err.response?.status || 500).json({
+      error: err.response?.data || err.message,
+    });
+  }
+};
+
+// Fallback question generator
+function generateFallbackQuestions(numQuestions: number): string[] {
+  const baseQuestions = [
+    "Tell me about yourself and your professional experience.",
+    "What motivated you to pursue this career path?",
+    "Describe a challenging project you've worked on and how you handled it.",
+    "How do you approach problem-solving in your work?",
+    "What are your greatest strengths and how do you apply them?",
+    "How do you handle constructive criticism and feedback?",
+    "Describe a time you had to learn a new skill quickly.",
+    "How do you prioritize tasks when managing multiple projects?",
+    "What are your career goals for the next few years?",
+    "How do you stay updated with industry trends and technologies?",
+    "Describe your experience working in a team environment.",
+    "How do you handle pressure and tight deadlines?",
+    "What makes you a good fit for this position?",
+    "How do you measure your own success?",
+    "What areas are you looking to improve professionally?"
+  ];
+  
+  // Shuffle and select the requested number of questions
+  const shuffled = [...baseQuestions].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(numQuestions, baseQuestions.length));
+}

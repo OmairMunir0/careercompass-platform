@@ -55,16 +55,19 @@ const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmit, isSubmittin
   return (
     <div className="bg-white rounded-lg shadow-md mb-6 p-4">
       <div className="flex items-center mb-4">
-        <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-          {user?.imageUrl ? (
+        <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
+          {(user?.profileImage || user?.imageUrl) ? (
             <img
-              src={"http://localhost:3001" + user.imageUrl}
-              alt={`${user.firstName} ${user.lastName}`}
+              src={(() => {
+                const imgUrl = user?.profileImage || user?.imageUrl || '';
+                return imgUrl.startsWith('http') ? imgUrl : `http://localhost:3001${imgUrl}`;
+              })()}
+              alt={`${user?.firstName} ${user?.lastName}`}
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="h-full w-full flex items-center justify-center bg-blue-500 text-white text-lg font-semibold">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-600 text-white text-lg font-semibold">
+              {user?.firstName?.[0] || ""}{user?.lastName?.[0] || ""}
             </div>
           )}
         </div>
