@@ -208,8 +208,6 @@ export const getAllPosts = async (req: Request, res: Response) => {
       // Return likes as count for backward compatibility
       postObj.likes = likesCount;
 
-      console.log(postObj)
-
       return postObj;
     });
 

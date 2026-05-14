@@ -119,11 +119,17 @@ const CategoryInterviewsPage: React.FC = () => {
     // Fetch interview questions on mount
     useEffect(() => {
         const fetchQuestions = async () => {
+            // Prevent refetching if questions are already loaded
+            if (InterviewQuestionFromChild.length > 0) {
+                console.log("Questions already loaded, skipping fetch");
+                return;
+            }
+
             if (isCustom && userId) {
                 // Generate dynamic questions for custom interview
                 try {
                     console.log("Generating questions for userId:", userId, "numQuestions:", numQuestions);
-                    const res = await axiosInstance.post("/interview-videos/generate-questions", null, {
+                    const res = await axiosInstance.post("/interview-videos/generate-questions", {}, {
                         params: { userId, numQuestions, useAI: true }
                     });
                     
@@ -165,7 +171,7 @@ const CategoryInterviewsPage: React.FC = () => {
             }
         };
         fetchQuestions();
-    }, [categoryId, isCustom, userId, numQuestions]);
+    }, [categoryId, isCustom, userId, numQuestions, InterviewQuestionFromChild.length]);
 
 
     // --- Interview handlers ---
@@ -281,6 +287,8 @@ const CategoryInterviewsPage: React.FC = () => {
                 queryParams.append('userId', userId);
                 queryParams.append('useDynamicQuestions', 'true');
                 queryParams.append('numQuestions', numQuestions.toString());
+                queryParams.append('questions', encodeURIComponent(JSON.stringify(InterviewQuestionFromChild)));
+                queryParams.append('timestamps', encodeURIComponent(JSON.stringify(timestampsRef.current)));
                 // Use a dummy categoryId for custom interviews
                 uploadUrl = `/interview-videos/upload?categoryId=custom&${queryParams.toString()}`;
             } else {
@@ -301,7 +309,7 @@ const CategoryInterviewsPage: React.FC = () => {
             let finalResult = null;
             
             while (!isComplete) {
-                await new Promise(resolve => setTimeout(resolve, 3000)); // wait 3 seconds
+                await new Promise(resolve => setTimeout(resolve, 1000)); // wait 3 seconds
                 const statusRes = await axiosInstance.get(`/interview-videos/status/${jobId}`);
                 
                 if (statusRes.data.status === 'completed') {
@@ -398,6 +406,7 @@ const CategoryInterviewsPage: React.FC = () => {
                     const res = await axiosInstance.get("/interview-questions", {
                         params: { categoryId },
                     });
+                    console.log(res);
                     setInterviewQuestionFromChild(res.data);
                 } catch (err) {
                     console.error("Failed to fetch interview questions:", err);
@@ -445,6 +454,7 @@ const CategoryInterviewsPage: React.FC = () => {
                 queryParams.append('userId', userId);
                 queryParams.append('useDynamicQuestions', 'true');
                 queryParams.append('numQuestions', numQuestions.toString());
+                queryParams.append('questions', encodeURIComponent(JSON.stringify(InterviewQuestionFromChild)));
                 uploadUrl = `/interview-videos/upload?categoryId=custom&${queryParams.toString()}`;
             } else {
                 // Regular category interview upload
@@ -462,7 +472,7 @@ const CategoryInterviewsPage: React.FC = () => {
             let finalResult = null;
             
             while (!isComplete) {
-                await new Promise(resolve => setTimeout(resolve, 3000)); // wait 3 seconds
+                await new Promise(resolve => setTimeout(resolve, 1000)); // wait 3 seconds
                 const statusRes = await axiosInstance.get(`/interview-videos/status/${jobId}`);
                 
                 if (statusRes.data.status === 'completed') {

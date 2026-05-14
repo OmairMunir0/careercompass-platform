@@ -73,7 +73,7 @@ export const generateQuestions = async (req: any, res: Response) => {
     
     // Try FastAPI first, but have a fallback
     try {
-      const response = await axios.post(`${process.env.FASTAPI_BASE_URL || 'http://127.0.0.1:8000'}/api/interview_video/generate-questions`, null, {
+      const response = await axios.post(`${'http://127.0.0.1:8000'}/api/interview_video/generate-questions`, {}, {
         params: { userId, numQuestions, useAI }
       });
       

@@ -172,15 +172,9 @@ Return only the questions as a JSON array of strings.
 """
         
         # Initialize Gemini model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3-flash-preview', generation_config={"response_mime_type": "application/json"})
         
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                max_output_tokens=500,
-            )
-        )
+        response = model.generate_content(prompt)
         
         questions_text = response.text.strip()
         
@@ -289,20 +283,26 @@ async def upload_video(background_tasks: BackgroundTasks,
         video_path = save_uploaded_video(file)
         
         # 2. Generate questions if needed
-        if useDynamicQuestions and userId:
+        if questions:
+            # Use questions provided from frontend (for both custom and category interviews)
+            raw_questions = json.loads(urllib.parse.unquote(questions))
+            questions_list = [{"_id": str(i), "question": q, "answer": "", "concepts": []} for i, q in enumerate(raw_questions)]
+        elif useDynamicQuestions and userId:
+            # Fallback: generate questions based on user profile if no questions provided
             user_profile = get_user_info(userId)
             questions_list = generate_ai_questions(user_profile, numQuestions)
-        elif questions:
-            questions_list = json.loads(urllib.parse.unquote(questions))
+            # Convert string questions to dict format for accuracy analysis
+            questions_list = [{"_id": str(i), "question": q, "answer": "", "concepts": []} for i, q in enumerate(questions_list)]
         else:
             # Default questions if none provided
-            questions_list = [
+            default_questions = [
                 "Tell me about yourself and your experience.",
                 "Describe a project you're proud of.",
                 "How do you handle challenges in your work?",
                 "What are your career goals?",
                 "Why are you interested in this position?"
             ]
+            questions_list = [{"_id": str(i), "question": q, "answer": "", "concepts": []} for i, q in enumerate(default_questions)]
         
         timestamps_list = []
         if timestamps:
@@ -343,6 +343,8 @@ async def generate_questions(
     try:
         # Get user profile
         user_profile = get_user_info(userId)
+        
+        print("User profile:", user_profile)
         
         if not user_profile:
             raise HTTPException(status_code=404, detail="User profile not found")

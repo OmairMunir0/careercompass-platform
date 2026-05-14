@@ -121,7 +121,6 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
 
       utterance.onstart = () => {
         setShowQuestion(true); // show current question when AI starts talking
-        setTimer(DEFAULT_ANSWER_TIME); // Reset timer display visually
       };
 
       utterance.onend = () => {
@@ -129,6 +128,7 @@ const InterviewQuestions: React.FC<InterviewQuestionsProps> = ({
         if (recordingStopped) return;
 
         currentQStartRef.current = (Date.now() - (recordingStartTime || Date.now())) / 1000;
+        setTimer(DEFAULT_ANSWER_TIME); // Start timer only after AI finishes speaking
 
         answerTimerRef.current = setInterval(() => {
           setTimer((prev) => {
